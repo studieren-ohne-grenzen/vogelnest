@@ -96,10 +96,10 @@ def create_guest(name, mail):
 def delete_user(uid):
     dn = find_user_dn(uid)
     groups = get_groups_as_member(uid)
-    for (group in groups):
+    for group in groups:
         remove_group_member(group.ou, uid)
     owned_groups = get_groups_as_owner(uid)
-    for (group in owned_groups):
+    for group in owned_groups:
         remove_group_owner(group.ou, uid)
     conn.delete(dn)
 
