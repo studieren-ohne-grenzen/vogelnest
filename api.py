@@ -21,6 +21,9 @@ def get_inactive_person_dn(uid):
 def get_guest_dn(uid):
   return 'uid='+uid+','+DN_PEOPLE_GUESTS
 
+def dn_to_uid(dn):
+    return dn.split(',', 2)[4:]
+
 def generate_username(name):
     uid = slugify(name, separator='.')
     check = uid
@@ -135,7 +138,7 @@ def add_group_member(group, uid):
 def get_group_members(group):
     conn.search(DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % group, attributes=['cn', 'ou', 'member'])
     if len(conn.entries):
-        return conn.entries[0].member.values
+        return [dn_to_uid(dn) for dn in conn.entries[0].member.values]
     else:
         raise Exception('Cannot find group %s' % group)
 
@@ -157,7 +160,7 @@ def add_group_owner(group, uid):
 def get_group_owners(group):
     conn.search(DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % group, attributes=['cn', 'ou', 'owner'])
     if len(conn.entries):
-        return conn.entries[0].owner.values
+        return [dn_to_uid(dn) for dn in conn.entries[0].owner.values]
     else:
         raise Exception('Cannot find group %s' % group)
 
