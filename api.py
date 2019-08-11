@@ -39,19 +39,22 @@ def generate_username(name):
     return check
 
 def find_user_dn(uid):
-    conn.search(DN_PEOPLE, '(&(objectClass=inetOrgPerson)(uid=%s))' % uid)
-    if len(conn.entries) > 0:
-        return conn.entries[0].entry_dn
-    else:
-        raise Exception('Cannot find user %s' % uid)
+    return get_user(uid).entry_dn
 
 def get_groups():
-    conn.search(DN_GROUPS, '(objectClass=groupOfNames)', attributes=['cn', 'mail'])
+    conn.search(DN_GROUPS, '(objectClass=groupOfNames)', attributes=['ou', 'cn', 'mail'])
     return conn.entries
 
 def get_users():
     conn.search(DN_PEOPLE, 'objectClass=inetOrgPerson', attributes=['cn', 'uid', 'mail'])
     return conn.entries
+
+def get_user(uid):
+    conn.search(DN_PEOPLE, '(&(objectClass=inetOrgPerson)(uid=%s))' % uid, ['cn', 'uid', 'mail'])
+    if len(conn.entries) > 0:
+        return conn.entries[0]
+    else:
+        raise Exception('Cannot find user %s' % uid)
 
 def create_user(firstName, lastName, password, alternativeMail):
     uid = generate_username(firstName+ ' '+ lastName)
@@ -138,7 +141,7 @@ def add_group_member(group, uid):
 def get_group_members(group):
     conn.search(DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % group, attributes=['cn', 'ou', 'member'])
     if len(conn.entries):
-        return [dn_to_uid(dn) for dn in conn.entries[0].member.values]
+        return [get_user(dn_to_uid(dn)) for dn in conn.entries[0].member.values]
     else:
         raise Exception('Cannot find group %s' % group)
 
@@ -160,7 +163,7 @@ def add_group_owner(group, uid):
 def get_group_owners(group):
     conn.search(DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % group, attributes=['cn', 'ou', 'owner'])
     if len(conn.entries):
-        return [dn_to_uid(dn) for dn in conn.entries[0].owner.values]
+        return [get_user(dn_to_uid(dn)) for dn in conn.entries[0].owner.values]
     else:
         raise Exception('Cannot find group %s' % group)
 
