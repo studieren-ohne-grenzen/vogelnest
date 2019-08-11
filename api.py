@@ -24,11 +24,11 @@ def generate_username(name):
     uid = slugify(name, separator='.')
     check = uid
     index = 2
-    exists = true
+    exists = True
     while(exists):
         try:
             find_user_dn(check)
-            exists = false
+            exists = False
         except Exception as e:
             check = uid + index
             index += 1
