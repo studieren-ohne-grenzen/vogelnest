@@ -124,7 +124,7 @@ def set_user_passsword(uid, password):
 
 def get_groups_as_member(uid):
     user_dn = find_user_dn(uid)
-    conn.search(DN_GROUPS, '(&(objectClass=groupOfNames)(member=%s))' % uid, attributes=['cn', 'ou', 'mail'])
+    conn.search(DN_GROUPS, '(&(objectClass=groupOfNames)(member=%s))' % user_dn, attributes=['cn', 'ou', 'mail'])
     return conn.entries
 
 def add_group_member(group, uid):
@@ -146,7 +146,7 @@ def remove_group_member(group, uid):
 
 def get_groups_as_owner(uid):
     user_dn = find_user_dn(uid)
-    conn.search(DN_GROUPS, '(&(objectClass=groupOfNames)(owner=%s))' % uid, attributes=['cn', 'ou', 'mail'])
+    conn.search(DN_GROUPS, '(&(objectClass=groupOfNames)(owner=%s))' % user_dn, attributes=['cn', 'ou', 'mail'])
     return conn.entries
 
 def add_group_owner(group, uid):
