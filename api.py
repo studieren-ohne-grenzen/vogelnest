@@ -1,11 +1,11 @@
 from ldap3 import Server, Connection, ALL, MODIFY_ADD, MODIFY_REPLACE, MODIFY_DELETE, HASHED_SALTED_SHA
 from ldap3.utils.hashed import hashed
-from './config.py' import LDAP_HOST, LDAP_PORT, BIND_DN, BIND_PW, MAIL_DOMAIN, \
+from config import LDAP_HOST, LDAP_PORT, BIND_DN, BIND_PW, MAIL_DOMAIN, \
  DN_GROUPS, DN_PEOPLE, DN_PEOPLE_ACTIVE, DN_PEOPLE_INACTIVE
 from slugify import slugify
 
 server = Server(LDAP_HOST, port=LDAP_PORT)
-conn = Connection(server,  BIND_DN, BIND_PW, auto_bind=True)
+conn = Connection(server, BIND_DN, BIND_PW, auto_bind=True)
 conn.start_tls()
 
 def get_group_dn(ou):
