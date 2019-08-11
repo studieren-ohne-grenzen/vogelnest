@@ -5,8 +5,9 @@ from config import LDAP_HOST, LDAP_PORT, BIND_DN, BIND_PW, MAIL_DOMAIN, \
 from slugify import slugify
 
 server = Server(LDAP_HOST, port=LDAP_PORT)
-conn = Connection(server, BIND_DN, BIND_PW, auto_bind=True)
+conn = Connection(server, BIND_DN, BIND_PW, auto_bind=False)
 conn.start_tls()
+conn.bind()
 
 def get_group_dn(ou):
   return 'ou='+ou+','+DN_GROUPS
