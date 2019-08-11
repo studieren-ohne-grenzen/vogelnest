@@ -134,8 +134,8 @@ def add_group_member(group, uid):
 
 def get_group_members(group):
     conn.search(DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % group, attributes=['cn', 'ou', 'member'])
-    if conn.entries[0]:
-        return conn.entries[0].member
+    if len(conn.entries):
+        return conn.entries[0].member.values
     else:
         raise Exception('Cannot find group %s' % group)
 
@@ -156,8 +156,8 @@ def add_group_owner(group, uid):
 
 def get_group_owners(group):
     conn.search(DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % group, attributes=['cn', 'ou', 'owner'])
-    if conn.entries[0]:
-        return conn.entries[0].owner
+    if len(conn.entries):
+        return conn.entries[0].owner.values
     else:
         raise Exception('Cannot find group %s' % group)
 
