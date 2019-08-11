@@ -28,10 +28,10 @@ def generate_username(name):
     while(exists):
         try:
             find_user_dn(check)
-            exists = False
-        except Exception as e:
             check = uid + str(index)
             index += 1
+        except Exception as e:
+            exists = False
     return check
 
 def find_user_dn(uid):
