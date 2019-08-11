@@ -30,7 +30,7 @@ def generate_username(name):
             find_user_dn(check)
             exists = False
         except Exception as e:
-            check = uid + index
+            check = uid + str(index)
             index += 1
     return check
 
