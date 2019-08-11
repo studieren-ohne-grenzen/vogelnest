@@ -2,6 +2,7 @@ from ldap3 import Server, Connection, ALL, MODIFY_ADD, MODIFY_REPLACE, MODIFY_DE
 from ldap3.utils.hashed import hashed
 from './config.py' import LDAP_HOST, LDAP_PORT, BIND_DN, BIND_PW, MAIL_DOMAIN, \
  DN_GROUPS, DN_PEOPLE, DN_PEOPLE_ACTIVE, DN_PEOPLE_INACTIVE
+from slugify import slugify
 
 server = Server(LDAP_HOST, port=LDAP_PORT)
 conn = Connection(server,  BIND_DN, BIND_PW, auto_bind=True)
@@ -19,6 +20,20 @@ def get_inactive_person_dn(uid):
 def get_guest_dn(uid):
   return 'uid='+uid+','+DN_PEOPLE_GUESTS
 
+def generate_username(name):
+    uid = slugify(name, separator='.')
+    check = uid
+    index = 2
+    exists = true
+    while(exists):
+        try:
+            find_user_dn(check)
+            exists = false
+        except(Exception e):
+            check = uid + index
+            index += 1
+    return check
+
 def find_user_dn(uid):
     conn.search(DN_PEOPLE, '(&(objectClass=inetOrgPerson)(uid=%s))' % uid)
     if conn.entries[0]:
@@ -34,7 +49,8 @@ def get_users():
     conn.search(DN_PEOPLE, 'objectClass=inetOrgPerson', attributes=['cn', 'uid', 'mail'])
     return conn.entries
 
-def create_user(uid, password, firstName, lastName, alternativeMail):
+def create_user(firstName, lastName, password, alternativeMail):
+    uid = generate_username(firstName+ ' '+ lastName)
     new_dn = get_inactive_person_dn(uid)
     mail = uid+'@'+MAIL_DOMAIN
     conn.add(new_dn, [
@@ -60,7 +76,22 @@ def create_user(uid, password, firstName, lastName, alternativeMail):
       'mailGidNumber': 5000,
       'mailUidNumber': 5000
     })
+    return uid
 
+def create_guest(name, mail):
+    uid = 'guest.'.generate_username(name)
+    dn = get_guest_dn(uid)
+    conn.add(new_dn, [
+            'inetOrgPerson',
+            'top',
+        ], {
+      'uid': uid,
+      'displayName': 'Guest %s' % name,
+      'cn': 'Guest %s' % name,
+      'givenName': 'Guest %s' % name,
+      'sn': 'Guest %s' % name,
+      'mail': 'mail'
+    })
 
 def delete_user(uid):
     dn = find_user_dn(uid)
