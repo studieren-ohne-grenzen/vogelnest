@@ -63,8 +63,8 @@ def create_user(firstName, lastName, password, alternativeMail):
             'PostfixBookMailForward'
         ], {
       'uid': uid,
-      'displayName': $firstName + " " + lastName,
-      'cn': $firstName + " " + lastName,
+      'displayName': firstName + " " + lastName,
+      'cn': firstName + " " + lastName,
       'givenName': firstName,
       'sn': lastName,
       'userPassword': hashed(HASHED_SALTED_SHA, password),
