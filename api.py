@@ -36,7 +36,7 @@ def generate_username(name):
 
 def find_user_dn(uid):
     conn.search(DN_PEOPLE, '(&(objectClass=inetOrgPerson)(uid=%s))' % uid)
-    if conn.entries[0]:
+    if 0 in conn.entries:
         return conn.entries[0].dn
     else:
         raise Exception('Cannot find user %s' % uid)
