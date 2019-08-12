@@ -137,6 +137,11 @@ def set_user_passsword(uid, password):
     hashed_pw = hashed(HASHED_SALTED_SHA, password)
     conn.modify(user_dn, {'userPassword': [(MODIFY_REPLACE, [hashed_pw])]})
 
+def check_user_passsword(uid, password):
+    user_dn = find_user_dn(uid)
+    hashed_pw = hashed(HASHED_SALTED_SHA, password)
+    return conn.compare(user_dn, 'userPassword', hashed_pw)
+
 def get_groups_as_pending_member(uid):
     user_dn = find_user_dn(uid)
     conn.search(DN_GROUPS, '(&(objectClass=groupOfNames)(pending=%s))' % user_dn, attributes=['cn', 'ou', 'mail'])
