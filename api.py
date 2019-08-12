@@ -45,6 +45,15 @@ def get_groups():
     conn.search(DN_GROUPS, '(objectClass=groupOfNames)', attributes=['ou', 'cn', 'mail'])
     return conn.entries
 
+def get_group(uid):
+    conn.search(DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % uid, ['cn', 'ou', 'mail'])
+    if len(conn.entries) > 0:
+        return conn.entries[0]
+    else:
+        raise Exception('Cannot find user %s' % uid)
+
+# Users
+
 def get_users():
     conn.search(DN_PEOPLE, 'objectClass=inetOrgPerson', attributes=['cn', 'uid', 'mail'])
     return conn.entries
@@ -142,6 +151,8 @@ def check_user_passsword(uid, password):
     hashed_pw = hashed(HASHED_SALTED_SHA, password)
     return conn.compare(user_dn, 'userPassword', hashed_pw)
 
+# Groups: pending
+
 def get_groups_as_pending_member(uid):
     user_dn = find_user_dn(uid)
     conn.search(DN_GROUPS, '(&(objectClass=groupOfNames)(pending=%s))' % user_dn, attributes=['cn', 'ou', 'mail'])
@@ -163,6 +174,8 @@ def remove_group_pending_member(group, uid):
     group_dn = get_group_dn(group)
     user_dn = find_user_dn(uid)
     conn.modify(group_dn, {'pending': [(MODIFY_DELETE, [user_dn])]})
+
+# Groups: member
 
 def get_groups_as_member(uid):
     user_dn = find_user_dn(uid)
@@ -186,15 +199,20 @@ def remove_group_member(group, uid):
     user_dn = find_user_dn(uid)
     conn.modify(group_dn, {'member': [(MODIFY_DELETE, [user_dn])]})
 
+# Groups: owner
+
 def get_groups_as_owner(uid):
     user_dn = find_user_dn(uid)
     conn.search(DN_GROUPS, '(&(objectClass=groupOfNames)(owner=%s))' % user_dn, attributes=['cn', 'ou', 'mail'])
     return conn.entries
 
-def add_group_owner(group, uid):
-    group_dn = get_group_dn(group)
+def add_group_owner(ou, uid):
+    group_dn = get_group_dn(ou)
     user_dn = find_user_dn(uid)
     conn.modify(group_dn, {'owner': [(MODIFY_ADD, [user_dn])]})
+    group =  get_group(ou)
+    if ('mail' in group):
+        add_user_mail_alias(uid, group.mail)
 
 def get_group_owners(group):
     conn.search(DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % group, attributes=['cn', 'ou', 'owner'])
@@ -203,7 +221,10 @@ def get_group_owners(group):
     else:
         raise Exception('Cannot find group %s' % group)
 
-def remove_group_owner(group, uid):
-    group_dn = get_group_dn(group)
+def remove_group_owner(ou, uid):
+    group_dn = get_group_dn(ou)
     user_dn = find_user_dn(uid)
     conn.modify(group_dn, {'owner': [(MODIFY_DELETE, [user_dn])]})
+    group =  get_group(ou)
+    if ('mail' in group):
+        remove_user_mail_alias(uid, group.mail)
