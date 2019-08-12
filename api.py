@@ -100,6 +100,15 @@ def create_guest(name, mail):
       'mail': 'mail'
     })
 
+def activate_user(uid):
+    old_dn = get_inactive_person_dn(uid)
+    pending_groups = get_groups_as_pending_member(uid)
+    for group in pending_groups:
+        remove_group_pending_member(group.ou, uid)
+    conn.modify_dn(old_dn, 'uid=%s' % uid, new_superior=DN_PEOPLE_ACTIVE)
+    for group in pending_groups:
+        add_group_pending_member(group.ou, uid)
+
 def delete_user(uid):
     dn = find_user_dn(uid)
     groups = get_groups_as_member(uid)
@@ -127,6 +136,28 @@ def set_user_passsword(uid, password):
     user_dn = find_user_dn(uid)
     hashed_pw = hashed(HASHED_SALTED_SHA, password)
     conn.modify(user_dn, {'userPassword': [(MODIFY_REPLACE, [hashed_pw])]})
+
+def get_groups_as_pending_member(uid):
+    user_dn = find_user_dn(uid)
+    conn.search(DN_GROUPS, '(&(objectClass=groupOfNames)(pending=%s))' % user_dn, attributes=['cn', 'ou', 'mail'])
+    return conn.entries
+
+def add_group_pending_member(group, uid):
+    group_dn = get_group_dn(group)
+    user_dn = find_user_dn(uid)
+    conn.modify(group_dn, {'pending': [(MODIFY_ADD, [user_dn])]})
+
+def get_group_pending_members(group):
+    conn.search(DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % group, attributes=['cn', 'ou', 'pending'])
+    if len(conn.entries):
+        return [get_user(dn_to_uid(dn)) for dn in conn.entries[0].pending.values]
+    else:
+        raise Exception('Cannot find group %s' % group)
+
+def remove_group_pending_member(group, uid):
+    group_dn = get_group_dn(group)
+    user_dn = find_user_dn(uid)
+    conn.modify(group_dn, {'pending': [(MODIFY_DELETE, [user_dn])]})
 
 def get_groups_as_member(uid):
     user_dn = find_user_dn(uid)
