@@ -49,12 +49,16 @@ def group(group):
 def group_members(group):
     return 'Hello, World!'
 
-@app.route('/groups/<group>/request_membership', methods=['POST'])
-def group_request_membership(group):
-    return 'Hello, World!'
-
 @app.route('/groups/<group>/members/<uid>', methods=['DELETE'])
 def group_member(group, uid):
+    return 'Hello, World!'
+
+@app.route('/groups/<group>/pending_members', methods=['GET','POST'])
+def group_pending_members(group):
+    return 'Hello, World!'
+
+@app.route('/groups/<group>/pending_members/<uid>', methods=['DELETE'])
+def group_pending_member(group, uid):
     return 'Hello, World!'
 
 @app.route('/groups/<group>/owners', methods=['GET', 'POST'])
