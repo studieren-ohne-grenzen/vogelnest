@@ -3,7 +3,7 @@ from api import API
 import config
 
 app = Flask(__name__)
-api = new API(config)
+api = API(config)
 
 @app.route('/guests', methods=['POST'])
 def users():

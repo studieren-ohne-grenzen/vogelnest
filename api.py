@@ -6,7 +6,7 @@ class API():
     def __init__(self, config):
         self.config = config
         server = Server(config.LDAP_HOST, port=config.LDAP_PORT)
-        self.conn = Connection(server, BIND_DN, BIND_PW, auto_bind=False)
+        self.conn = Connection(server, config.BIND_DN, config.BIND_PW, auto_bind=False)
         self.conn.start_tls()
         self.conn.bind()
 
