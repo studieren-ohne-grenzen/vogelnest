@@ -1,3 +1,4 @@
+from datetime import timedelta
 from flask import Flask, request, url_for, session, abort
 from flask import render_template, redirect
 from api import LdapApi
@@ -7,6 +8,8 @@ import config
 
 app = Flask(__name__)
 app.secret_key = config.SESSIONS_ENC_KEY
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
+app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 
 api = LdapApi(config)
 oauth = OAuth(app)
