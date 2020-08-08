@@ -1,3 +1,5 @@
+DASHBOARD_URL = 'secret'
+
 LDAP_HOST = 'localhost'
 LDAP_PORT = 64389
 

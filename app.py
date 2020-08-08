@@ -1,4 +1,4 @@
-from flask import Flask, request, url_for, session
+from flask import Flask, request, url_for, session, abort
 from flask import render_template, redirect
 from api import LdapApi
 from authlib.integrations.flask_client import OAuth
@@ -29,8 +29,10 @@ oauth.register(
 
 @app.route('/')
 def homepage():
-    if session.get('logged_in') == True:
-        return redirect('/whoami')
+    return abort(403)
+
+@app.route('/login')
+def login():
     redirect_uri = url_for('authorize', _external=True)
     return oauth.sog.authorize_redirect(redirect_uri)
 
@@ -50,20 +52,20 @@ def authorize():
     session['logged_in'] = True
     session['username'] = username
 
-    return redirect('/')
+    return redirect(config.DASHBOARD_URL)
 
 
 @app.route('/logout')
 def logout():
     session.pop('logged_in', None)
     session.pop('username', None)
-    return redirect('/')
+    return redirect('/login')
 
 @app.route('/whoami', methods=['GET'])
 def whoami():
     if session.get('logged_in') == True:
         return session.get('username')
-    return 'Unauthenticated Request'
+    return abort(401)
 
 @app.route('/guests', methods=['POST'])
 def guests():
