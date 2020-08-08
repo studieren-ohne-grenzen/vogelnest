@@ -14,3 +14,5 @@ BIND_PW = ''
 
 MAIL_DOMAIN = 'studieren-ohne-grenzen.org'
 MAIL_ALIAS_DOMAIN = 's-o-g.org'
+
+JWT_SECRET = 'secret'

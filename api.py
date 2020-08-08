@@ -137,17 +137,18 @@ class LdapApi():
         self.conn.modify(user_dn, {'userPassword': [(MODIFY_REPLACE, [hashed_pw])]})
 
     def check_user_password(self, uid, password):
-        user_dn = self.find_user_dn(uid)
-
-        new_server = Server(config.LDAP_HOST, port=config.LDAP_PORT, allowed_referral_hosts=[('*', True)])
         successful = False
         try:
+            user_dn = self.find_user_dn(uid)
+            new_server = Server(config.LDAP_HOST, port=config.LDAP_PORT, allowed_referral_hosts=[('*', True)])
             new_conn = Connection(new_server, user_dn, password, auto_bind=True)
             new_conn.bind()
             new_conn.unbind()
             successful = True
-        except LDAPBindError:
+        except (LDAPBindError, LdapApiException) as e:
             successful = False
+            pass
+        
         return successful
 
     # Groups: pending

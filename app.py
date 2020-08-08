@@ -2,36 +2,43 @@ from flask import Flask, request, url_for, session, abort, jsonify
 from datetime import timedelta
 from flask import render_template, redirect
 from api import LdapApi
+from ldap3.utils import conv
 
+import datetime
+import jwt
 import json
 import ldap_json
 import config
 
 app = Flask(__name__)
-
 api = LdapApi(config)
 
 @app.route('/')
 def homepage():
-    return abort(403) # Security by obscurity
+    return abort(401) # Security by obscurity
 
-# TODO
-@app.route('/login')
+# LOGIN
+# HTTP 401: Bitte einloggen
+# HTTP 403: Falsches Passwort / falscher Nutzername
+# Der Client sendet per POST ein JSON Dokument
+# Mit Username und Passowrt
+@app.route('/login', methods=['POST'])
 def login():
+    username = request.json.get('username')
+    password = request.json.get('password')
+    # Gegen LDAP Hijacking
+    username = conv.escape_filter_chars(username, encoding="UTF-8")
+    password = conv.escape_filter_chars(password, encoding="UTF-8")
 
-    return redirect(config.DASHBOARD_URL)
+    if api.check_user_password(username,password):
+        ## Jetzt erzeugen wir das JWT, welches den USER ausweist
+        token = jwt.encode({'token': username,
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=16)},
+            config.JWT_SECRET, algorithm='HS256')
 
-# TODO
-@app.route('/authorize')
-def authorize():
-
-    return redirect(config.DASHBOARD_URL)
-
-# TODO
-@app.route('/logout')
-def logout():
-    
-    return redirect('/login')
+        return token;
+    else:
+        abort(403)
 
 @app.route('/guests', methods=['POST'])
 def guests():
