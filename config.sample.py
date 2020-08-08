@@ -12,3 +12,11 @@ BIND_PW = ''
 
 MAIL_DOMAIN = 'studieren-ohne-grenzen.org'
 MAIL_ALIAS_DOMAIN = 's-o-g.org'
+
+SESSIONS_ENC_KEY = 'secret'
+OAUTH_CLIENT_ID = 'secret'
+OAUTH_CLIENT_SECRET = 'secret'
+
+OAUTH_ACCESS_URL = 'secret'
+OAUTH_AUTH_URL = 'secret'
+OAUTH_API_URL = 'secret'
