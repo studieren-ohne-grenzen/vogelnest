@@ -73,38 +73,64 @@ def whoami():
 
 @app.route('/guests', methods=['POST'])
 def guests():
+    if not session.get('logged_in'):
+        return abort(401)
     return 'Hello, World!'
 
-@app.route('/users', methods=['GET', 'POST'])
+@app.route('/users', methods=['GET'])
 def users():
+    if not session.get('logged_in'):
+        return abort(401)
     return 'Hello, World!'
 
-@app.route('/users/<uid>', methods=['GET', 'DELETE'])
+@app.route('/users/<uid>', methods=['GET'])
 def user(uid):
+    if not session.get('logged_in'):
+        return abort(401)
     ldap_user = api.get_user(uid)
     return str(ldap_user)
 
 @app.route('/users/<uid>/set_password', methods=['POST'])
 def user_set_password(uid):
-    return 'Hello, World!'
+    if not session.get('logged_in'):
+        return abort(401)
+    uid = session['username']
+    old_password = request.json.get('old_password')
+    new_password = request.json.get('new_password')
+    if api.check_user_password(uid, old_password):
+        api.set_user_password(uid, new_password)
+        return "ok", 200
+    else:
+        return "invalid old password", 401
 
 @app.route('/users/<uid>/reset_password', methods=['POST'])
 def user_reset_password(uid):
+    if not session.get('logged_in'):
+        return abort(401)
     return 'Hello, World!'
 
 @app.route('/users/<uid>/activate', methods=['POST'])
 def user_activate(uid):
-    return 'Hello, World!'
-
-@app.route('/users/<uid>/groups', methods=['GET'])
-def user_groups(uid):
-    return 'Hello, World!'
+    if not session.get('logged_in'):
+        return abort(401)
+    api.activate_user(uid)
+    return "ok", 200
 
 @app.route('/users/<uid>/owned_groups', methods=['GET'])
 def user_owned_groups(uid):
+    if not session.get('logged_in'):
+        return abort(401)
     return 'Hello, World!'
 
-@app.route('/mygroups', methods=['GET', 'POST'])
+@app.route('/groups', methods=['GET'])
+def groups():
+    if not session.get('logged_in'):
+        return abort(401)
+    groups = [ldap_json.group_to_dict(x) for x in api.get_groups()]
+
+    return jsonify(groups)
+
+@app.route('/mygroups', methods=['GET'])
 def mygroups():
     if not session.get('logged_in'):
         return abort(401)
@@ -130,16 +156,14 @@ def mygroups():
     all_groups.extend(member_groups)
     all_groups.extend(owned_groups)
 
-
     return jsonify(all_groups)
-    
 
-@app.route('/groups/<group>', methods=['GET'])
-def group(group):
-    return 'Hello, World!'
-
-@app.route('/groups/<group>/members', methods=['GET', 'POST'])
+@app.route('/groups/<group>/members', methods=['GET'])
 def group_members(group):
+    if not session.get('logged_in'):
+        return abort(401)
+    if not any(x.uid == session['username'] for x in api.get_group_owners(group)):
+        return abort(401)
     ldap_members = api.get_group_members(group)
     members = []
     for x in ldap_members:
@@ -149,12 +173,12 @@ def group_members(group):
             print(e)
     return jsonify(members)
 
-@app.route('/groups/<group>/members/<uid>', methods=['DELETE'])
-def group_member(group, uid):
-    return 'Hello, World!'
-
 @app.route('/groups/<group>/pending_members', methods=['GET','POST'])
 def group_pending_members(group):
+    if not session.get('logged_in'):
+        return abort(401)
+    if not any(x.uid == session['username'] for x in api.get_group_owners(group)):
+        return abort(401)
     ldap_members = api.get_group_pending_members(group)
     members = []
     for x in ldap_members:
@@ -164,12 +188,10 @@ def group_pending_members(group):
             print(e)
     return jsonify(members)
 
-@app.route('/groups/<group>/pending_members/<uid>', methods=['DELETE'])
-def group_pending_member(group, uid):
-    return 'Hello, World!'
-
-@app.route('/groups/<group>/owners', methods=['GET', 'POST'])
+@app.route('/groups/<group>/owners', methods=['GET'])
 def group_owners(group):
+    if not session.get('logged_in'):
+        return abort(401)
     ldap_owners = api.get_group_owners(group)
     owners = []
     for x in ldap_owners:
@@ -179,6 +201,51 @@ def group_owners(group):
             print(e)
     return jsonify(owners)
 
-@app.route('/groups/<group>/owners/<uid>', methods=['DELETE'])
-def group_owner(group, uid):
-    return 'Hello, World!'
+@app.route('/groups/<group>/add_member/<uid>', methods=['POST'])
+def add_user_to_group(group, uid):
+    if not session.get('logged_in'):
+        return abort(401)
+    if not any(x.uid == session['username'] for x in api.get_group_owners(group)):
+        return abort(401)
+    api.add_group_member(group, uid)
+
+@app.route('/groups/<group>/remove_member/<uid>', methods=['POST'])
+def remove_user_from_group(group, uid):
+    if not session.get('logged_in'):
+        return abort(401)
+    if not any(x.uid == session['username'] for x in api.get_group_owners(group)):
+        return abort(401)
+    api.remove_group_member(group, uid)
+
+@app.route('/groups/<group>/add_owner/<uid>', methods=['POST'])
+def add_owner_to_group(group, uid):
+    if not session.get('logged_in'):
+        return abort(401)
+    if not any(x.uid == session['username'] for x in api.get_group_owners(group)):
+        return abort(401)
+    api.add_group_owner(group, uid)
+
+@app.route('/groups/<group>/add_owner/<uid>', methods=['POST'])
+def remove_owner_from_group(group, uid):
+    if not session.get('logged_in'):
+        return abort(401)
+    if not any(x.uid == session['username'] for x in api.get_group_owners(group)):
+        return abort(401)
+    api.remove_group_owner(group, uid)
+
+@app.route('/groups/<group>/add_guest/<name>/<mail>', methods=['POST'])
+def add_guest_to_group(group, name, mail):
+    if not session.get('logged_in'):
+        return abort(401)
+    if not any(x.uid == session['username'] for x in api.get_group_owners(group)):
+        return abort(401)
+    uid = api.create_guest(name, mail)
+    api.add_group_member(group, uid)
+
+@app.route('/groups/<group>/request_access/', methods=['POST'])
+def request_access_to_group(group, uid):
+    if not session.get('logged_in'):
+        return abort(401)
+    if not any(x.uid == session['username'] for x in api.get_group_owners(group)):
+        return abort(401)
+    api.add_group_member(group, uid)

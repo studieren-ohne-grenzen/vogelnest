@@ -9,7 +9,6 @@ def group_to_dict(group):
     }
 
 def user_to_dict(user):
-    print(user)
     return {
         "uid": user.uid[0],
         "name": user.cn[0],

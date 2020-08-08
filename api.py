@@ -80,41 +80,6 @@ class LdapApi():
         else:
             raise LdapApiException('Cannot find user %s' % uid)
 
-    def create_user(self, first_name, last_name, password, alternative_mail):
-        uid = self.generate_username(first_name+ ' '+ last_name)
-        new_dn = self.get_inactive_person_dn(uid)
-        mail = uid+'@'+self.config.MAIL_DOMAIN
-        mail_alias = uid+'@'+self.config.MAIL_ALIAS_DOMAIN
-        self.conn.add(new_dn, [
-            'person',
-            'sogperson',
-            'organizationalPerson',
-            'inetOrgPerson',
-            'top',
-            'PostfixBookMailAccount',
-            'PostfixBookMailForward'
-        ], {
-            'uid': uid,
-            'displayName': first_name + " " + last_name,
-            'cn': first_name + " " + last_name,
-            'givenName': first_name,
-            'sn': last_name,
-            'userPassword': hashed(HASHED_SALTED_SHA, password),
-            'mail': mail,
-            'mailAlias': mail_alias,
-            'mail-alternative': alternative_mail,
-            'mailHomeDirectory': '/srv/vmail/%s' % mail,
-            'mailStorageDirectory': 'maildir:/srv/vmail/%s/Maildir' % mail,
-            'mailEnabled': 'TRUE',
-            'mailGidNumber': 5000,
-            'mailUidNumber': 5000
-        })
-
-        if self.conn.result['result'] != 0:
-            raise LdapApiException(self.conn.result)
-
-        return uid
-
     def create_guest(self, name, mail):
         uid = 'guest.'+self.generate_username(name)
         dn = self.get_guest_dn(uid)
@@ -132,7 +97,6 @@ class LdapApi():
 
         if self.conn.result['result'] != 0:
             raise RuntimeError(self.conn.result)
-
         return uid
 
     def activate_user(self, uid):
@@ -170,7 +134,6 @@ class LdapApi():
     def set_user_password(self, uid, password):
         user_dn = self.find_user_dn(uid)
         hashed_pw = hashed(HASHED_SALTED_SHA, password)
-        print(hashed_pw)
         self.conn.modify(user_dn, {'userPassword': [(MODIFY_REPLACE, [hashed_pw])]})
 
     def check_user_password(self, uid, password):
