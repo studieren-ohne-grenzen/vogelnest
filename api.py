@@ -1,5 +1,6 @@
 from ldap3 import Server, Connection, ALL, MODIFY_ADD, MODIFY_REPLACE, MODIFY_DELETE, HASHED_SALTED_SHA
 from ldap3.utils.hashed import hashed
+from ldap3.core.exceptions import LDAPBindError
 from slugify import slugify
 import config
 
@@ -28,7 +29,7 @@ class LdapApi():
         return 'uid='+uid+','+self.config.DN_PEOPLE_GUESTS
 
     def dn_to_uid(self, dn):
-        return dn.split(',', 2)[4:]
+        return dn.split(',')[0][4:]
 
     def generate_username(self, name):
         uid = slugify(name, separator='.', replacements=
@@ -172,10 +173,16 @@ class LdapApi():
     def check_user_password(self, uid, password):
         user_dn = self.find_user_dn(uid)
 
-        self.conn = Connection(self.server, user_dn, password, auto_bind=True)
-        self.conn.start_tls()
-        self.conn.bind()
-        # return self.conn.compare(user_dn, 'userPassword', hashed_pw)
+        new_server = Server(config.LDAP_HOST, port=config.LDAP_PORT, allowed_referral_hosts=[('*', True)])
+        successful = False
+        try:
+            new_conn = Connection(new_server, user_dn, password, auto_bind=True)
+            new_conn.bind()
+            new_conn.unbind()
+            successful = True
+        except LDAPBindError:
+            successful = False
+        return successful
 
     # Groups: pending
 
@@ -215,7 +222,7 @@ class LdapApi():
 
     def get_group_members(self, group):
         self.conn.search(config.DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % group, attributes=['cn', 'ou', 'member'])
-        if len(self.conn.entries):
+        if len(self.conn.entries) >= 1:
             return [self.get_user(self.dn_to_uid(dn)) for dn in self.conn.entries[0].member.values]
         else:
             raise Exception('Cannot find group %s' % group)
