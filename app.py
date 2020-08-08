@@ -4,8 +4,6 @@ from flask import render_template, redirect
 from api import LdapApi
 from ldap3.utils import conv
 
-import datetime
-import jwt
 import json
 import ldap_json
 import config
@@ -32,13 +30,22 @@ def login():
 
     if api.check_user_password(username,password):
         ## Jetzt erzeugen wir das JWT, welches den USER ausweist
-        token = jwt.encode({'token': username,
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=16)},
-            config.JWT_SECRET, algorithm='HS256')
-
+        token = api.create_jwt_token(username)
         return token;
     else:
         abort(403)
+
+# Checkt, ob ein Token gültig ist
+# TODO nur für Debug
+# Man tut den Namen als username param und das JWT in das Bearer Feld
+# Man bekommt dann seinen Namen geochot
+@app.route('/ami', methods=['GET'])
+def whoami():
+    uid = request.args.get('username')
+    authheader = request.headers.get('Authorization')
+    if authheader and api.check_valid_jwt(uid, authheader):
+        return uid;
+    abort(403)
 
 @app.route('/guests', methods=['POST'])
 def guests():

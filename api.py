@@ -3,6 +3,8 @@ from ldap3.utils.hashed import hashed
 from ldap3.core.exceptions import LDAPBindError
 from slugify import slugify
 import config
+import datetime
+import jwt
 
 USER_ATTRIBUTES = ['uid', 'cn', 'mail']
 GROUP_ATTRIBUTES = ['ou', 'cn', 'businessCategory', 'owner', 'member']
@@ -151,8 +153,27 @@ class LdapApi():
         
         return successful
 
-    # Groups: pending
+    # Erzeugt ein JWT Token für einen Nutzer
+    def create_jwt_token(self, uid):
+        return jwt.encode({'username': uid,
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=16)},
+            config.JWT_SECRET, algorithm='HS256')
 
+    # Checkt ob ein JWT echt und gültig ist
+    def check_valid_jwt(self, uid, header):
+        successful = False
+        try:
+            header_fields = header.split(" ");
+            jwt_user = jwt.decode(header_fields[1], config.JWT_SECRET, algorithms=['HS256']).get("username")
+            if header_fields[0] == "Bearer" and jwt_user and jwt_user == uid:
+                successful = True
+        except jwt.InvalidTokenError:
+            print ("Inval");
+            successful = False
+
+        return successful
+    
+    # Groups: pending
     def get_groups_as_pending_member(self, uid):
         user_dn = self.find_user_dn(uid)
         self.conn.search(self.config.DN_GROUPS, '(&(objectClass=groupOfNames)(pending=%s))' % user_dn, attributes=GROUP_ATTRIBUTES)
