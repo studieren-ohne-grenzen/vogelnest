@@ -6,7 +6,7 @@ app = Flask(__name__)
 api = API(config)
 
 @app.route('/guests', methods=['POST'])
-def users():
+def guests():
     return 'Hello, World!'
 
 @app.route('/users', methods=['GET', 'POST'])
@@ -26,7 +26,7 @@ def user_reset_password(uid):
     return 'Hello, World!'
 
 @app.route('/users/<uid>/activate', methods=['POST'])
-def user_reset_password(uid):
+def user_activate(uid):
     return 'Hello, World!'
 
 @app.route('/users/<uid>/groups', methods=['GET'])
