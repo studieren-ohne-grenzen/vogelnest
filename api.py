@@ -4,11 +4,12 @@ from slugify import slugify
 
 class API():
     def __init__(self, config):
-        self.config = config
-        server = Server(config.LDAP_HOST, port=config.LDAP_PORT)
-        self.conn = Connection(server, config.BIND_DN, config.BIND_PW, auto_bind=False)
-        self.conn.start_tls()
-        self.conn.bind()
+        # self.config = config
+        # server = Server(config.LDAP_HOST, port=config.LDAP_PORT)
+        # self.conn = Connection(server, config.BIND_DN, config.BIND_PW, auto_bind=False)
+        # self.conn.start_tls()
+        # self.conn.bind()
+        pass
 
     def get_group_dn(self, ou):
       return 'ou='+ou+','+self.config.DN_GROUPS
