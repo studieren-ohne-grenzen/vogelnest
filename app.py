@@ -1,9 +1,9 @@
 from flask import Flask, request
-from api import API
+from api import LdapApi
 import config
 
 app = Flask(__name__)
-api = API(config)
+api = LdapApi(config)
 
 @app.route('/guests', methods=['POST'])
 def guests():

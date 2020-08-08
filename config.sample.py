@@ -1,4 +1,3 @@
-
 LDAP_HOST = 'localhost'
 LDAP_PORT = 64389
 
@@ -12,3 +11,4 @@ BIND_DN = 'uid=dashboard,ou=services,dc=sog'
 BIND_PW = ''
 
 MAIL_DOMAIN = 'studieren-ohne-grenzen.org'
+MAIL_ALIAS_DOMAIN = 's-o-g.org'
