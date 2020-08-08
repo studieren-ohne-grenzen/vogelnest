@@ -75,7 +75,8 @@ def users():
 
 @app.route('/users/<uid>', methods=['GET', 'DELETE'])
 def user(uid):
-    return 'Hello, World!'
+    ldap_user = api.get_user(uid)
+    return str(ldap_user)
 
 @app.route('/users/<uid>/set_password', methods=['POST'])
 def user_set_password(uid):

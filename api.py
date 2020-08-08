@@ -62,7 +62,7 @@ class LdapApi():
         if len(self.conn.entries) > 0:
             return self.conn.entries[0]
         else:
-            raise Exception('Cannot find user %s' % uid)
+            raise LdapApiException('Cannot find user %s' % uid)
 
     # Users
 
@@ -75,7 +75,7 @@ class LdapApi():
         if len(self.conn.entries) > 0:
             return self.conn.entries[0]
         else:
-            raise Exception('Cannot find user %s' % uid)
+            raise LdapApiException('Cannot find user %s' % uid)
 
     def create_user(self, first_name, last_name, password, alternative_mail):
         uid = self.generate_username(first_name+ ' '+ last_name)
@@ -201,7 +201,7 @@ class LdapApi():
         if len(self.conn.entries):
             return [self.get_user(self.dn_to_uid(dn)) for dn in self.conn.entries[0].pending.values]
         else:
-            raise Exception('Cannot find group %s' % group)
+            raise LdapApiException('Cannot find group %s' % group)
 
     def remove_group_pending_member(self, group, uid):
         group_dn = self.get_group_dn(group)
@@ -225,7 +225,7 @@ class LdapApi():
         if len(self.conn.entries) >= 1:
             return [self.get_user(self.dn_to_uid(dn)) for dn in self.conn.entries[0].member.values]
         else:
-            raise Exception('Cannot find group %s' % group)
+            raise LdapApiException('Cannot find group %s' % group)
 
     def remove_group_member(self, group, uid):
         group_dn = self.get_group_dn(group)
@@ -252,7 +252,7 @@ class LdapApi():
         if len(self.conn.entries):
             return [self.get_user(self.dn_to_uid(dn)) for dn in self.conn.entries[0].owner.values]
         else:
-            raise Exception('Cannot find group %s' % group)
+            raise LdapApiException('Cannot find group %s' % group)
 
     def remove_group_owner(self, ou, uid):
         group_dn = self.get_group_dn(ou)
