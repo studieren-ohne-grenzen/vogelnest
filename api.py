@@ -4,6 +4,9 @@ from ldap3.core.exceptions import LDAPBindError
 from slugify import slugify
 import config
 
+USER_ATTRIBUTES = ['uid', 'cn', 'mail']
+GROUP_ATTRIBUTES = ['ou', 'cn', 'businessCategory', 'owner', 'member']
+
 class LdapApiException(Exception):
     pass
 
@@ -54,11 +57,11 @@ class LdapApi():
         return self.get_user(uid).entry_dn
 
     def get_groups(self):
-        self.conn.search(self.config.DN_GROUPS, '(objectClass=groupOfNames)', attributes=['ou', 'cn', 'mail'])
+        self.conn.search(self.config.DN_GROUPS, '(objectClass=groupOfNames)', attributes=GROUP_ATTRIBUTES)
         return self.conn.entries
 
     def get_group(self, uid):
-        self.conn.search(config.DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % uid, attributes=['cn', 'ou', 'mail'])
+        self.conn.search(config.DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % uid, attributes=GROUP_ATTRIBUTES)
         if len(self.conn.entries) > 0:
             return self.conn.entries[0]
         else:
@@ -67,11 +70,11 @@ class LdapApi():
     # Users
 
     def get_users(self):
-        self.conn.search(config.DN_PEOPLE, '(objectClass=inetOrgPerson)', attributes=['cn', 'uid', 'mail'])
+        self.conn.search(config.DN_PEOPLE, '(objectClass=inetOrgPerson)', attributes=USER_ATTRIBUTES)
         return self.conn.entries
 
     def get_user(self, uid):
-        self.conn.search(config.DN_PEOPLE, '(&(objectClass=inetOrgPerson)(uid=%s))' % uid, attributes=['cn', 'uid', 'mail'])
+        self.conn.search(config.DN_PEOPLE, '(&(objectClass=inetOrgPerson)(uid=%s))' % uid, attributes=USER_ATTRIBUTES)
         if len(self.conn.entries) > 0:
             return self.conn.entries[0]
         else:
@@ -188,7 +191,7 @@ class LdapApi():
 
     def get_groups_as_pending_member(self, uid):
         user_dn = self.find_user_dn(uid)
-        self.conn.search(self.config.DN_GROUPS, '(&(objectClass=groupOfNames)(pending=%s))' % user_dn, attributes=['cn', 'ou', 'mail'])
+        self.conn.search(self.config.DN_GROUPS, '(&(objectClass=groupOfNames)(pending=%s))' % user_dn, attributes=GROUP_ATTRIBUTES)
         return self.conn.entries
 
     def add_group_pending_member(self, group, uid):
@@ -197,9 +200,18 @@ class LdapApi():
         self.conn.modify(group_dn, {'pending': [(MODIFY_ADD, [user_dn])]})
 
     def get_group_pending_members(self, group):
-        self.conn.search(config.DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % group, attributes=['cn', 'ou', 'pending'])
+        self.conn.search(config.DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % group, attributes=GROUP_ATTRIBUTES)
         if len(self.conn.entries):
-            return [self.get_user(self.dn_to_uid(dn)) for dn in self.conn.entries[0].pending.values]
+            group_members = []
+            if not "values" in self.conn.entries[0]:
+                return []
+            for dn in self.conn.entries[0].pending.values:
+                try:
+                    group_members.append(self.get_user(self.dn_to_uid(dn)))
+                # this happens
+                except LdapApiException:
+                    print(dn, "does not exist")
+            return group_members
         else:
             raise LdapApiException('Cannot find group %s' % group)
 
@@ -212,7 +224,7 @@ class LdapApi():
 
     def get_groups_as_member(self, uid):
         user_dn = self.find_user_dn(uid)
-        self.conn.search(self.config.DN_GROUPS, '(&(objectClass=groupOfNames)(member=%s))' % user_dn, attributes=['cn', 'ou', 'mail'])
+        self.conn.search(self.config.DN_GROUPS, '(&(objectClass=groupOfNames)(member=%s))' % user_dn, attributes=GROUP_ATTRIBUTES)
         return self.conn.entries
 
     def add_group_member(self, group, uid):
@@ -221,11 +233,9 @@ class LdapApi():
         self.conn.modify(group_dn, {'member': [(MODIFY_ADD, [user_dn])]})
 
     def get_group_members(self, group):
-        self.conn.search(config.DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % group, attributes=['cn', 'ou', 'member'])
-        if len(self.conn.entries) >= 1:
-            return [self.get_user(self.dn_to_uid(dn)) for dn in self.conn.entries[0].member.values]
-        else:
-            raise LdapApiException('Cannot find group %s' % group)
+        group_dn = self.get_group_dn(group)
+        self.conn.search(config.DN_PEOPLE, '(&(objectClass=inetOrgPerson)(memberOf=%s))' % group_dn, attributes=USER_ATTRIBUTES)
+        return self.conn.entries
 
     def remove_group_member(self, group, uid):
         group_dn = self.get_group_dn(group)
@@ -236,7 +246,7 @@ class LdapApi():
 
     def get_groups_as_owner(self, uid):
         user_dn = self.find_user_dn(uid)
-        self.conn.search(self.config.DN_GROUPS, '(&(objectClass=groupOfNames)(owner=%s))' % user_dn, attributes=['cn', 'ou', 'mail'])
+        self.conn.search(self.config.DN_GROUPS, '(&(objectClass=groupOfNames)(owner=%s))' % user_dn, attributes=GROUP_ATTRIBUTES)
         return self.conn.entries
 
     def add_group_owner(self, ou, uid):
@@ -248,9 +258,16 @@ class LdapApi():
             self.add_user_mail_alias(uid, group.mail)
 
     def get_group_owners(self, group):
-        self.conn.search(config.DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % group, attributes=['cn', 'ou', 'owner'])
+        self.conn.search(config.DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % group, attributes=GROUP_ATTRIBUTES)
         if len(self.conn.entries):
-            return [self.get_user(self.dn_to_uid(dn)) for dn in self.conn.entries[0].owner.values]
+            group_owners = []
+            for dn in self.conn.entries[0].owner.values:
+                try:
+                    group_owners.append(self.get_user(self.dn_to_uid(dn)))
+                # this happens
+                except LdapApiException:
+                    print(dn, "does not exist")
+            return group_owners
         else:
             raise LdapApiException('Cannot find group %s' % group)
 
