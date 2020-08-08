@@ -1,9 +1,69 @@
-from flask import Flask, request
+from flask import Flask, request, url_for, session
+from flask import render_template, redirect
 from api import LdapApi
+from authlib.integrations.flask_client import OAuth
+
 import config
 
 app = Flask(__name__)
+app.secret_key = config.SESSIONS_ENC_KEY
+
 api = LdapApi(config)
+oauth = OAuth(app)
+
+oauth.register(
+    name='sog',
+    client_id= config.OAUTH_CLIENT_ID,
+    client_secret= config.OAUTH_CLIENT_SECRET,
+    access_token_url=config.OAUTH_TOKEN_URL,
+    access_token_params=None,
+    authorize_url=config.OAUTH_AUTH_URL,
+    authorize_params=None,
+    api_base_url=config.OAUTH_API_URL,
+    client_kwargs = {
+        'scope' : 'profile',
+        'token_endpoint_auth_method': 'client_secret_basic',
+    }
+)
+
+
+@app.route('/')
+def homepage():
+    if session.get('logged_in') == True:
+        return redirect('/whoami')
+    redirect_uri = url_for('authorize', _external=True)
+    return oauth.sog.authorize_redirect(redirect_uri)
+
+
+@app.route('/authorize')
+def authorize():
+    token = oauth.sog.authorize_access_token()
+    
+    userdata = oauth.sog.get('user').json()
+    username = userdata['username']
+    
+    # Wir bereinigen den Username um den SOG-Prefix
+    if username.startswith('sog_'):
+        username = username[4:]
+
+    # Wir speichern den Username in der Session
+    session['logged_in'] = True
+    session['username'] = username
+
+    return redirect('/')
+
+
+@app.route('/logout')
+def logout():
+    session.pop('logged_in', None)
+    session.pop('username', None)
+    return redirect('/')
+
+@app.route('/whoami', methods=['GET'])
+def whoami():
+    if session.get('logged_in') == True:
+        return session.get('username')
+    return 'Unauthenticated Request'
 
 @app.route('/guests', methods=['POST'])
 def guests():
