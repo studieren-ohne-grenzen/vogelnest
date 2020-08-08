@@ -1,6 +1,6 @@
 
 LDAP_HOST = 'localhost'
-LDAP_PORT = 389
+LDAP_PORT = 64389
 
 DN_GROUPS = 'ou=groups,o=sog-de,dc=sog'
 DN_PEOPLE = 'ou=people,o=sog-de,dc=sog'
