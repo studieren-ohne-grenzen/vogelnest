@@ -71,16 +71,13 @@ def whoami():
         return session.get('username')
     return abort(401)
 
-@app.route('/guests', methods=['POST'])
-def guests():
+@app.route('/users/', methods=['GET'])
+@app.route('/users/<group_id>/', methods=['GET'])
+def users(group_id = None):
+    if group_id == None
     if not session.get('logged_in'):
         return abort(401)
-    return 'Hello, World!'
 
-@app.route('/users', methods=['GET'])
-def users():
-    if not session.get('logged_in'):
-        return abort(401)
     return 'Hello, World!'
 
 @app.route('/users/<uid>', methods=['GET'])
