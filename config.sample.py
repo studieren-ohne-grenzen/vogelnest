@@ -1,7 +1,7 @@
-DASHBOARD_URL = 'secret'
+DASHBOARD_URL = ''
 
-LDAP_HOST = 'localhost'
-LDAP_PORT = 64389
+LDAP_HOST = ''
+LDAP_PORT = 389
 
 DN_GROUPS = 'ou=groups,o=sog-de,dc=sog'
 DN_PEOPLE = 'ou=people,o=sog-de,dc=sog'
@@ -15,4 +15,14 @@ BIND_PW = ''
 MAIL_DOMAIN = 'studieren-ohne-grenzen.org'
 MAIL_ALIAS_DOMAIN = 's-o-g.org'
 
-JWT_SECRET = 'secret'
+# Used to encrypt sessions server side
+SESSIONS_ENC_KEY = ''
+
+JWT_SECRET = 'brotzeit'
+
+REMBERME_SECRET = ''
+
+MAIL_ADDRESS = ''
+MAIL_SERVER = ''
+MAIL_PASSWORD = ''
+
