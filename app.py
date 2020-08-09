@@ -2,74 +2,50 @@ from flask import Flask, request, url_for, session, abort, jsonify
 from datetime import timedelta
 from flask import render_template, redirect
 from api import LdapApi
-from authlib.integrations.flask_client import OAuth
+from ldap3.utils import conv
 
 import json
 import ldap_json
 import config
 
 app = Flask(__name__)
-app.secret_key = config.SESSIONS_ENC_KEY
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
-app.config['SESSION_REFRESH_EACH_REQUEST'] = True
-
 api = LdapApi(config)
-oauth = OAuth(app)
-
-oauth.register(
-    name='sog',
-    client_id= config.OAUTH_CLIENT_ID,
-    client_secret= config.OAUTH_CLIENT_SECRET,
-    access_token_url=config.OAUTH_TOKEN_URL,
-    access_token_params=None,
-    authorize_url=config.OAUTH_AUTH_URL,
-    authorize_params=None,
-    api_base_url=config.OAUTH_API_URL,
-    client_kwargs = {
-        'scope' : 'profile',
-        'token_endpoint_auth_method': 'client_secret_basic',
-    }
-)
 
 @app.route('/')
 def homepage():
-    return abort(403)
+    return abort(401) # Security by obscurity
 
-@app.route('/login')
+# LOGIN
+# HTTP 401: Bitte einloggen
+# HTTP 403: Falsches Passwort / falscher Nutzername
+# Der Client sendet per POST ein JSON Dokument
+# Mit Username und Passowrt
+@app.route('/login', methods=['POST'])
 def login():
-    redirect_uri = url_for('authorize', _external=True)
-    return oauth.sog.authorize_redirect(redirect_uri)
+    username = request.json.get('username')
+    password = request.json.get('password')
+    # Gegen LDAP Hijacking
+    username = conv.escape_filter_chars(username, encoding="UTF-8")
+    password = conv.escape_filter_chars(password, encoding="UTF-8")
 
+    if api.check_user_password(username,password):
+        ## Jetzt erzeugen wir das JWT, welches den USER ausweist
+        token = api.create_jwt_token(username)
+        return token;
+    else:
+        abort(403)
 
-@app.route('/authorize')
-def authorize():
-    token = oauth.sog.authorize_access_token()
-    print(token)
-    
-    userdata = oauth.sog.get('user').json()
-    username = userdata['username']
-    
-    # Wir bereinigen den Username um den SOG-Prefix
-    if username.startswith('sog_'):
-        username = username[4:]
-
-    # Wir speichern den Username in der Session
-    session['logged_in'] = True
-    session['username'] = username
-
-    return redirect(config.DASHBOARD_URL)
-
-@app.route('/logout')
-def logout():
-    session.pop('logged_in', None)
-    session.pop('username', None)
-    return redirect('/login')
-
-@app.route('/whoami', methods=['GET'])
+# Checkt, ob ein Token gültig ist
+# TODO nur für Debug
+# Man tut den Namen als username param und das JWT in das Bearer Feld
+# Man bekommt dann seinen Namen geochot
+@app.route('/ami', methods=['GET'])
 def whoami():
-    if session.get('logged_in') == True:
-        return session.get('username')
-    return abort(401)
+    uid = request.args.get('username')
+    authheader = request.headers.get('Authorization')
+    if authheader and api.check_valid_jwt(uid, authheader):
+        return uid;
+    abort(403)
 
 @app.route('/users/', methods=['GET'])
 @app.route('/users/<group_id>/', methods=['GET'])
