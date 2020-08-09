@@ -3,8 +3,6 @@ from ldap3.utils.hashed import hashed
 from ldap3.core.exceptions import LDAPBindError
 from slugify import slugify
 import config
-import datetime
-import jwt
 
 USER_ATTRIBUTES = ['uid', 'cn', 'mail']
 GROUP_ATTRIBUTES = ['ou', 'cn', 'businessCategory']
@@ -82,6 +80,13 @@ class LdapApi():
             return self.conn.entries[0]
         else:
             raise LdapApiException('Cannot find user %s' % uid)
+
+    def get_user_by_alternative_mail(self, alternative_mail):
+        self.conn.search(config.DN_PEOPLE, '(&(objectClass=inetOrgPerson)(mail-alternative=%s))' % alternative_mail, attributes=USER_ATTRIBUTES)
+        if len(self.conn.entries) > 0:
+            return self.conn.entries[0]
+        else:
+            raise LdapApiException('Cannot find user with  %s' % alternative_mail)
 
     def get_user_info(self, uid):
         detailed_user_attributes = [
@@ -175,25 +180,6 @@ class LdapApi():
             pass
         
         return successful
-
-    # Erzeugt ein JWT Token für einen Nutzer
-    def create_jwt_token(self, uid):
-        return jwt.encode({'username': uid,
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=16)},
-            config.JWT_SECRET, algorithm='HS256')
-
-    # returns None if header is invalid
-    def get_jwt_user(self, header):
-        if header == None:
-            return None
-        header_fields = header.split(" ")
-        if header_fields[0] != "Bearer":
-            return None
-        try:
-            jwt_user = jwt.decode(header_fields[1], config.JWT_SECRET, algorithms=['HS256']).get("username")
-        except jwt.InvalidTokenError:
-            return None
-        return jwt_user
         
     # Groups: pending
     def get_groups_as_pending_member(self, uid):

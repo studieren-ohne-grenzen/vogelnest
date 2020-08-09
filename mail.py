@@ -10,7 +10,7 @@ def send_message(to_email, subject, text):
     message = MIMEMultipart("alternative")
 
     html_text = MIMEText(text, "html")
-    message["Subject"] = "Dashboard message"
+    message["Subject"] = subject
     message["From"] = config.MAIL_ADDRESS
     message["To"] = to_email
 
@@ -20,3 +20,11 @@ def send_message(to_email, subject, text):
         server.login(config.MAIL_ADDRESS, config.MAIL_PASSWORD)
 
         server.sendmail(config.MAIL_ADDRESS, to_email, message.as_string())
+
+def send_text_message(to_email, subject, file_name, replacements):
+    file = open(file_name)
+    text = file.read()
+    file.close()
+    for replacement_key in replacements:
+        text = text.replace("{" + replacement_key + "}", replacements[replacement_key])
+    send_message(to_email, subject, text)

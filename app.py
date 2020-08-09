@@ -1,9 +1,11 @@
 from flask import Flask, request, url_for, abort, jsonify
 from datetime import timedelta
 from flask import render_template, redirect
-from ldap_api import LdapApi
+from ldap_api import LdapApi, LdapApiException
 from ldap3.utils import conv
 from middleware import middleware
+import token_handler
+from os.path import join
 
 import json
 import config
@@ -12,7 +14,7 @@ import mail
 
 api = LdapApi(config)
 app = Flask(__name__)
-app.wsgi_app = middleware(app.wsgi_app, api)
+app.wsgi_app = middleware(app.wsgi_app)
 
 def dn_to_uid(dn):
     return dn.split(',')[0][4:]
@@ -25,6 +27,7 @@ def object_to_dict(obj):
     dictionary = json.loads(obj.entry_to_json())["attributes"]
     keys = dictionary.keys()
     for key in keys:
+        key = key.replace("-", "_")
         if len(dictionary[key]) >= 1:
             dictionary[key] = dictionary[key][0]
         else:
@@ -47,7 +50,7 @@ def login():
 
     if api.check_user_password(username,password):
         ## Jetzt erzeugen wir das JWT, welches den USER ausweist
-        token = api.create_jwt_token(username)
+        token = token_handler.create_session_jwt_token(username)
         return token
     else:
         abort(403)
@@ -58,7 +61,7 @@ def login():
 # Man bekommt dann seinen Namen geochot
 @app.route('/whoami', methods=['GET'])
 def whoami():
-    uid = api.get_jwt_user(request.headers.get('Authorization'))
+    uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if uid == None:
         return abort(401)
     info = api.get_user_info(uid)
@@ -72,7 +75,7 @@ def users(group_id = None):
 
 @app.route('/users/set_password', methods=['POST'])
 def user_set_password():
-    uid = api.get_jwt_user(request.headers.get('Authorization'))
+    uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if uid == None:
         return abort(401)
     old_password = request.json.get('old_password')
@@ -85,7 +88,7 @@ def user_set_password():
 
 @app.route('/users/set_alternative_mail', methods=['POST'])
 def user_set_alternative_mail():
-    uid = api.get_jwt_user(request.headers.get('Authorization'))
+    uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if uid == None:
         return abort(401)
     new_mail = request.json.get('alternative_mail')
@@ -94,7 +97,35 @@ def user_set_alternative_mail():
 
 @app.route('/users/reset_password', methods=['POST'])
 def user_reset_password():
-    return 'Hello, World!'
+    alternative_mail = request.json.get('alternative_mail')
+    try:
+        user = api.get_user_by_alternative_mail(alternative_mail)
+        password_reset_token = token_handler.create_password_reset_jwt_token(user.uid[0]).decode("utf-8")
+        mail.send_text_message(alternative_mail, "Passwort-Reset", "emails/password_reset_email.html", {
+            "name": user.uid[0],
+            "link": join(config.DASHBOARD_URL, "confirm?key=" + password_reset_token),
+        })
+        return "ok"
+    except LdapApiException as e:
+        print(e)
+        return abort(401)
+
+@app.route('/users/confirm_email', methods=['POST'])
+def confirm_email():
+    alternative_mail = request.json.get('alternative_mail')
+    uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
+    if uid == None:
+        return abort(401)
+    try:
+        email_reset_token = token_handler.create_email_confirmation_jwt_token(uid, alternative_mail).decode("utf-8")
+        mail.send_text_message(alternative_mail, "Email-Confirmation", "emails/email_confirmation.html", {
+            "name": uid,
+            "link": join(config.DASHBOARD_URL, "confirm?key=" + email_reset_token),
+        })
+        return "ok"
+    except LdapApiException as e:
+        print(e)
+        return abort(401)
 
 @app.route('/users/activate', methods=['POST'])
 def user_activate():
@@ -110,7 +141,7 @@ def groups():
 
 @app.route('/mygroups', methods=['GET'])
 def mygroups():
-    username = api.get_jwt_user(request.headers.get('Authorization'))
+    username = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if username == None:
         return abort(401)
     pending_groups = [object_to_dict(x) for x in api.get_groups_as_pending_member(username)]
@@ -139,7 +170,7 @@ def mygroups():
 @app.route('/groups/members', methods=['GET'])
 def group_members():
     group_id = sanitize(request.args.get('group_id'))
-    uid = api.get_jwt_user(request.headers.get('Authorization'))
+    uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if uid == None:
         return abort(401)
     if not any(x.uid == uid for x in api.get_group_owners(group_id)):
@@ -156,7 +187,7 @@ def group_members():
 @app.route('/groups/guests', methods=['GET'])
 def group_guests():
     group_id = sanitize(request.args.get('group_id'))
-    uid = api.get_jwt_user(request.headers.get('Authorization'))
+    uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if uid == None:
         return abort(401)
     if not any(x.uid == uid for x in api.get_group_owners(group_id)):
@@ -173,7 +204,7 @@ def group_guests():
 @app.route('/groups/pending_members', methods=['GET'])
 def group_pending_members():
     group_id = sanitize(request.args.get('group_id'))
-    my_uid = api.get_jwt_user(request.headers.get('Authorization'))
+    my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if my_uid == None:
         return abort(401)
     if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
@@ -203,7 +234,7 @@ def group_owners():
 def add_user_to_group():
     group_id = sanitize(request.args.get('group_id'))
     uid = sanitize(request.args.get('uid'))
-    my_uid = api.get_jwt_user(request.headers.get('Authorization'))
+    my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if my_uid == None:
         return abort(401)
     if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
@@ -215,7 +246,7 @@ def add_user_to_group():
 def remove_user_from_group():
     group_id = sanitize(request.args.get('group_id'))
     uid = sanitize(request.args.get('uid'))
-    my_uid = api.get_jwt_user(request.headers.get('Authorization'))
+    my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if my_uid == None:
         return abort(401)
     if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
@@ -227,7 +258,7 @@ def remove_user_from_group():
 def add_owner_to_group():
     group_id = sanitize(request.args.get('group_id'))
     uid = sanitize(request.args.get('uid'))
-    my_uid = api.get_jwt_user(request.headers.get('Authorization'))
+    my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if my_uid == None:
         return abort(401)
     if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
@@ -239,7 +270,7 @@ def add_owner_to_group():
 def remove_owner_from_group():
     group_id = sanitize(request.args.get('group_id'))
     uid = sanitize(request.args.get('uid'))
-    my_uid = api.get_jwt_user(request.headers.get('Authorization'))
+    my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if my_uid == None:
         return abort(401)
     if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
@@ -252,7 +283,7 @@ def add_guest_to_group():
     group_id = sanitize(request.args.get('group_id'))
     name = sanitize(request.args.get('name'))
     mail = sanitize(request.args.get('mail'))
-    my_uid = api.get_jwt_user(request.headers.get('Authorization'))
+    my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if my_uid == None:
         return abort(401)
     if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
@@ -264,7 +295,7 @@ def add_guest_to_group():
 @app.route('/groups/request_access', methods=['POST'])
 def request_access_to_group():
     group_id = sanitize(request.args.get('group_id'))
-    my_uid = api.get_jwt_user(request.headers.get('Authorization'))
+    my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if my_uid == None:
         return abort(401)
     if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
@@ -276,7 +307,7 @@ def request_access_to_group():
 def accept_pending_member():
     group_id = sanitize(request.args.get('group_id'))
     uid = sanitize(request.args.get('uid'))
-    my_uid = api.get_jwt_user(request.headers.get('Authorization'))
+    my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if my_uid == None:
         return abort(401)
     if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
@@ -284,3 +315,11 @@ def accept_pending_member():
     api.remove_group_pending_member(group_id, uid)
     api.add_group_member(group_id, uid)
     return "ok"
+
+@app.route('/confirm', methods=['GET'])
+def confirm_mail():
+    token_str = request.args.get('key')
+    response = token_handler.read_email_token(token_str)
+    if response == None:
+        return abort(401)
+    return response
