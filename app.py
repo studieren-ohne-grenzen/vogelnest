@@ -319,7 +319,12 @@ def accept_pending_member():
 @app.route('/confirm', methods=['GET'])
 def confirm_mail():
     token_str = request.args.get('key')
-    response = token_handler.read_email_token(token_str)
-    if response == None:
+    token_str, token_type = token_handler.read_email_token(token_str)
+    redirect_url = None
+    if token_type == None:
         return abort(401)
-    return response
+    elif token_type == "password_reset":
+        redirect_url = config.FRONTEND_URL + "/confirm/password"
+    elif token_type == "email_confirmation":
+        redirect_url = config.FRONTEND_URL + "/confirm/email"
+    return redirect_url(redirect_url, code=302)

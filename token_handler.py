@@ -44,13 +44,12 @@ def read_email_token(token_str):
         token = jwt.decode(token_str, config.JWT_SECRET, algorithms=['HS256'])
         print("yooo token", token)
         if token["type"] == "password_reset":
-            # redirect to password reset page with token
-            return "password reset " + token_str
+            pass
         elif token["type"] == "email_confirmation":
             print(token)
             app.api.set_user_mail(app.sanitize(token["uid"]), app.sanitize(token["email"]))
-            return "ok"
         else:
-            return None
+            return None, None
+        return token_str, token["type"]
     except jwt.InvalidTokenError:
-        return None
+        return None, None
