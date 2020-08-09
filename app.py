@@ -1,15 +1,17 @@
-from flask import Flask, request, url_for, session, abort, jsonify
+from flask import Flask, request, url_for, abort, jsonify
 from datetime import timedelta
 from flask import render_template, redirect
 from api import LdapApi
 from ldap3.utils import conv
+from middleware import middleware
 
 import json
 import ldap_json
 import config
 
-app = Flask(__name__)
 api = LdapApi(config)
+app = Flask(__name__)
+app.wsgi_app = middleware(app.wsgi_app, api)
 
 @app.route('/')
 def homepage():
@@ -24,14 +26,11 @@ def homepage():
 def login():
     username = request.json.get('username')
     password = request.json.get('password')
-    # Gegen LDAP Hijacking
-    username = conv.escape_filter_chars(username, encoding="UTF-8")
-    password = conv.escape_filter_chars(password, encoding="UTF-8")
 
     if api.check_user_password(username,password):
         ## Jetzt erzeugen wir das JWT, welches den USER ausweist
         token = api.create_jwt_token(username)
-        return token;
+        return token
     else:
         abort(403)
 
@@ -39,35 +38,22 @@ def login():
 # TODO nur für Debug
 # Man tut den Namen als username param und das JWT in das Bearer Feld
 # Man bekommt dann seinen Namen geochot
-@app.route('/ami', methods=['GET'])
+@app.route('/whoami', methods=['GET'])
 def whoami():
-    uid = request.args.get('username')
-    authheader = request.headers.get('Authorization')
-    if authheader and api.check_valid_jwt(uid, authheader):
-        return uid;
-    abort(403)
+    uid = api.get_jwt_user(request.headers.get('Authorization'))
+    if uid == None:
+        return abort(403)
+    return uid
 
-@app.route('/users/', methods=['GET'])
-@app.route('/users/<group_id>/', methods=['GET'])
+@app.route('/users', methods=['GET'])
 def users(group_id = None):
-    if group_id == None
-    if not session.get('logged_in'):
-        return abort(401)
-
+    if group_id == None:
+        pass
     return 'Hello, World!'
 
-@app.route('/users/<uid>', methods=['GET'])
-def user(uid):
-    if not session.get('logged_in'):
-        return abort(401)
-    ldap_user = api.get_user(uid)
-    return str(ldap_user)
-
-@app.route('/users/<uid>/set_password', methods=['POST'])
-def user_set_password(uid):
-    if not session.get('logged_in'):
-        return abort(401)
-    uid = session['username']
+@app.route('/users/set_password', methods=['POST'])
+def user_set_password():
+    uid = api.get_jwt_user(request.headers.get('Authorization'))
     old_password = request.json.get('old_password')
     new_password = request.json.get('new_password')
     if api.check_user_password(uid, old_password):
@@ -76,38 +62,25 @@ def user_set_password(uid):
     else:
         return "invalid old password", 401
 
-@app.route('/users/<uid>/reset_password', methods=['POST'])
-def user_reset_password(uid):
-    if not session.get('logged_in'):
-        return abort(401)
+@app.route('/users/reset_password', methods=['POST'])
+def user_reset_password():
     return 'Hello, World!'
 
-@app.route('/users/<uid>/activate', methods=['POST'])
-def user_activate(uid):
-    if not session.get('logged_in'):
-        return abort(401)
+@app.route('/users/activate', methods=['POST'])
+def user_activate():
+    uid = request.args.get('uid')
     api.activate_user(uid)
     return "ok", 200
 
-@app.route('/users/<uid>/owned_groups', methods=['GET'])
-def user_owned_groups(uid):
-    if not session.get('logged_in'):
-        return abort(401)
-    return 'Hello, World!'
-
-@app.route('/groups', methods=['GET'])
+@app.route('/groups/', methods=['GET'])
 def groups():
-    if not session.get('logged_in'):
-        return abort(401)
     groups = [ldap_json.group_to_dict(x) for x in api.get_groups()]
 
     return jsonify(groups)
 
 @app.route('/mygroups', methods=['GET'])
 def mygroups():
-    if not session.get('logged_in'):
-        return abort(401)
-    username = session.get('username')
+    username = api.get_jwt_user(request.headers.get('Authorization'))
     pending_groups = [ldap_json.group_to_dict(x) for x in api.get_groups_as_pending_member(username)]
     member_groups = [ldap_json.group_to_dict(x) for x in api.get_groups_as_member(username)]
     owned_groups = [ldap_json.group_to_dict(x) for x in api.get_groups_as_owner(username)]
@@ -131,13 +104,14 @@ def mygroups():
 
     return jsonify(all_groups)
 
-@app.route('/groups/<group>/members', methods=['GET'])
-def group_members(group):
-    if not session.get('logged_in'):
+@app.route('/groups/members', methods=['GET'])
+def group_members():
+    group_id = request.args.get('group_id')
+    print(group_id)
+    uid = api.get_jwt_user(request.headers.get('Authorization'))
+    if not any(x.uid == uid for x in api.get_group_owners(group_id)):
         return abort(401)
-    if not any(x.uid == session['username'] for x in api.get_group_owners(group)):
-        return abort(401)
-    ldap_members = api.get_group_members(group)
+    ldap_members = api.get_group_members(group_id)
     members = []
     for x in ldap_members:
         try:
@@ -146,13 +120,13 @@ def group_members(group):
             print(e)
     return jsonify(members)
 
-@app.route('/groups/<group>/pending_members', methods=['GET','POST'])
-def group_pending_members(group):
-    if not session.get('logged_in'):
+@app.route('/groups/pending_members', methods=['GET'])
+def group_pending_members():
+    group_id = request.args.get('group_id')
+    my_uid = api.get_jwt_user(request.headers.get('Authorization'))
+    if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
         return abort(401)
-    if not any(x.uid == session['username'] for x in api.get_group_owners(group)):
-        return abort(401)
-    ldap_members = api.get_group_pending_members(group)
+    ldap_members = api.get_group_pending_members(group_id)
     members = []
     for x in ldap_members:
         try:
@@ -161,11 +135,10 @@ def group_pending_members(group):
             print(e)
     return jsonify(members)
 
-@app.route('/groups/<group>/owners', methods=['GET'])
-def group_owners(group):
-    if not session.get('logged_in'):
-        return abort(401)
-    ldap_owners = api.get_group_owners(group)
+@app.route('/groups/owners', methods=['GET'])
+def group_owners():
+    group_id = request.args.get('group_id')
+    ldap_owners = api.get_group_owners(group_id)
     owners = []
     for x in ldap_owners:
         try:
@@ -174,51 +147,57 @@ def group_owners(group):
             print(e)
     return jsonify(owners)
 
-@app.route('/groups/<group>/add_member/<uid>', methods=['POST'])
-def add_user_to_group(group, uid):
-    if not session.get('logged_in'):
+@app.route('/groups/add_member/', methods=['POST'])
+def add_user_to_group():
+    group_id = request.args.get('group_id')
+    uid = request.args.get('uid')
+    my_uid = api.get_jwt_user(request.headers.get('Authorization'))
+    if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
         return abort(401)
-    if not any(x.uid == session['username'] for x in api.get_group_owners(group)):
-        return abort(401)
-    api.add_group_member(group, uid)
+    api.add_group_member(group_id, uid)
 
-@app.route('/groups/<group>/remove_member/<uid>', methods=['POST'])
-def remove_user_from_group(group, uid):
-    if not session.get('logged_in'):
+@app.route('/groups/remove_member/', methods=['POST'])
+def remove_user_from_group():
+    group_id = request.args.get('group_id')
+    uid = request.args.get('uid')
+    my_uid = api.get_jwt_user(request.headers.get('Authorization'))
+    if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
         return abort(401)
-    if not any(x.uid == session['username'] for x in api.get_group_owners(group)):
-        return abort(401)
-    api.remove_group_member(group, uid)
+    api.remove_group_member(group_id, uid)
 
-@app.route('/groups/<group>/add_owner/<uid>', methods=['POST'])
-def add_owner_to_group(group, uid):
-    if not session.get('logged_in'):
+@app.route('/groups/add_owner/', methods=['POST'])
+def add_owner_to_group():
+    group_id = request.args.get('group_id')
+    uid = request.args.get('uid')
+    my_uid = api.get_jwt_user(request.headers.get('Authorization'))
+    if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
         return abort(401)
-    if not any(x.uid == session['username'] for x in api.get_group_owners(group)):
-        return abort(401)
-    api.add_group_owner(group, uid)
+    api.add_group_owner(group_id, uid)
 
-@app.route('/groups/<group>/add_owner/<uid>', methods=['POST'])
-def remove_owner_from_group(group, uid):
-    if not session.get('logged_in'):
+@app.route('/groups/add_owner/', methods=['POST'])
+def remove_owner_from_group():
+    group_id = request.args.get('group_id')
+    uid = request.args.get('uid')
+    my_uid = api.get_jwt_user(request.headers.get('Authorization'))
+    if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
         return abort(401)
-    if not any(x.uid == session['username'] for x in api.get_group_owners(group)):
-        return abort(401)
-    api.remove_group_owner(group, uid)
+    api.remove_group_owner(group_id, uid)
 
-@app.route('/groups/<group>/add_guest/<name>/<mail>', methods=['POST'])
-def add_guest_to_group(group, name, mail):
-    if not session.get('logged_in'):
-        return abort(401)
-    if not any(x.uid == session['username'] for x in api.get_group_owners(group)):
+@app.route('/groups/add_guest/', methods=['POST'])
+def add_guest_to_group():
+    group_id = request.args.get('group_id')
+    name = request.args.get('name')
+    mail = request.args.get('mail')
+    my_uid = api.get_jwt_user(request.headers.get('Authorization'))
+    if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
         return abort(401)
     uid = api.create_guest(name, mail)
-    api.add_group_member(group, uid)
+    api.add_group_member(group_id, uid)
 
-@app.route('/groups/<group>/request_access/', methods=['POST'])
-def request_access_to_group(group, uid):
-    if not session.get('logged_in'):
+@app.route('/groups/request_access/', methods=['POST'])
+def request_access_to_group():
+    group_id = request.args.get('group_id')
+    my_uid = api.get_jwt_user(request.headers.get('Authorization'))
+    if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
         return abort(401)
-    if not any(x.uid == session['username'] for x in api.get_group_owners(group)):
-        return abort(401)
-    api.add_group_member(group, uid)
+    api.add_group_member(group_id, my_uid)

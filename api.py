@@ -148,6 +148,7 @@ class LdapApi():
             new_conn.unbind()
             successful = True
         except (LDAPBindError, LdapApiException) as e:
+            print(e)
             successful = False
             pass
         
@@ -159,20 +160,19 @@ class LdapApi():
             'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=16)},
             config.JWT_SECRET, algorithm='HS256')
 
-    # Checkt ob ein JWT echt und gültig ist
-    def check_valid_jwt(self, uid, header):
-        successful = False
+    # returns None if header is invalid
+    def get_jwt_user(self, header):
+        if header == None:
+            return None
+        header_fields = header.split(" ")
+        if header_fields[0] != "Bearer":
+            return None
         try:
-            header_fields = header.split(" ");
             jwt_user = jwt.decode(header_fields[1], config.JWT_SECRET, algorithms=['HS256']).get("username")
-            if header_fields[0] == "Bearer" and jwt_user and jwt_user == uid:
-                successful = True
         except jwt.InvalidTokenError:
-            print ("Inval");
-            successful = False
-
-        return successful
-    
+            return None
+        return jwt_user
+        
     # Groups: pending
     def get_groups_as_pending_member(self, uid):
         user_dn = self.find_user_dn(uid)
