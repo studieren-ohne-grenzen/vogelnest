@@ -81,6 +81,15 @@ def user_set_password():
     else:
         return "invalid old password", 401
 
+@app.route('/users/set_alternative_mail', methods=['POST'])
+def user_set_alternative_mail():
+    uid = api.get_jwt_user(request.headers.get('Authorization'))
+    if uid == None:
+        return abort(401)
+    new_mail = request.json.get('alternative_mail')
+    api.set_user_alternative_mail(uid, new_mail)
+    return "ok", 200
+
 @app.route('/users/reset_password', methods=['POST'])
 def user_reset_password():
     return 'Hello, World!'

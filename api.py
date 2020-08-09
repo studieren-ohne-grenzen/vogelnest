@@ -89,7 +89,6 @@ class LdapApi():
             'cn',
             'mail',
             'mail-alternative',
-            'mailAlias',
             'sn',
             'displayName',
             'givenName',
@@ -156,6 +155,10 @@ class LdapApi():
         user_dn = self.find_user_dn(uid)
         hashed_pw = hashed(HASHED_SALTED_SHA, password)
         self.conn.modify(user_dn, {'userPassword': [(MODIFY_REPLACE, [hashed_pw])]})
+
+    def set_user_alternative_mail(self, uid, alternative_mail):
+        user_dn = self.find_user_dn(uid)
+        self.conn.modify(user_dn, {'mail-alternative': [(MODIFY_REPLACE, [alternative_mail])]})
 
     def check_user_password(self, uid, password):
         successful = False
