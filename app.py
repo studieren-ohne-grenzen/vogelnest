@@ -73,11 +73,12 @@ def users(group_id = None):
         pass
     return 'Hello, World!'
 
-@app.route('/users/set_password', methods=['POST'])
-def user_set_password():
+@app.route('/users/set_password_with_old', methods=['POST'])
+def user_set_password_with_old():
     uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if uid == None:
         return abort(401)
+
     old_password = request.json.get('old_password')
     new_password = request.json.get('new_password')
     if api.check_user_password(uid, old_password):
@@ -85,6 +86,18 @@ def user_set_password():
         return "ok", 200
     else:
         return "invalid old password", 401
+
+@app.route('/users/set_password_with_key', methods=['POST'])
+def user_set_password_with_key():
+    token_str = request.json.get('key')
+
+    uid = token_handler.get_token_user_with_string(token_str)
+    if uid == None:
+        return abort(401)
+
+    new_password = request.json.get('new_password')
+    api.set_user_password(uid, new_password)
+    return "ok", 200
 
 @app.route('/users/set_alternative_mail', methods=['POST'])
 def user_set_alternative_mail():
@@ -100,6 +113,8 @@ def user_reset_password():
     alternative_mail = request.json.get('alternative_mail')
     try:
         user = api.get_user_by_alternative_mail(alternative_mail)
+        if user == None:
+            return abort(401)
         password_reset_token = token_handler.create_password_reset_jwt_token(user.uid[0]).decode("utf-8")
         mail.send_text_message(alternative_mail, "Passwort-Reset", "emails/password_reset_email.html", {
             "name": user.uid[0],
@@ -319,7 +334,7 @@ def accept_pending_member():
 @app.route('/confirm', methods=['GET'])
 def confirm_mail():
     token_str = request.args.get('key')
-    token_str, token_type = token_handler.read_email_token(token_str)
+    token_type = token_handler.read_email_token(token_str)
     redirect_url = None
     if token_type == None:
         return abort(401)
@@ -327,4 +342,4 @@ def confirm_mail():
         redirect_url = config.FRONTEND_URL + "/confirm/password"
     elif token_type == "email_confirmation":
         redirect_url = config.FRONTEND_URL + "/confirm/email"
-    return redirect_url(redirect_url, code=302)
+    return redirect(redirect_url, code=302)
