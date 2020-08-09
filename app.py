@@ -1,12 +1,14 @@
 from flask import Flask, request, url_for, abort, jsonify
 from datetime import timedelta
 from flask import render_template, redirect
-from api import LdapApi
+from ldap_api import LdapApi
 from ldap3.utils import conv
 from middleware import middleware
 
 import json
 import config
+
+import mail
 
 api = LdapApi(config)
 app = Flask(__name__)
