@@ -26,13 +26,13 @@ def sanitize(x):
 def object_to_dict(obj):
     dictionary = json.loads(obj.entry_to_json())["attributes"]
     keys = dictionary.keys()
-    for key in keys:
-        key = key.replace("-", "_")
+    new_dictionary = {}
+    for key in list(keys):
         if len(dictionary[key]) >= 1:
-            dictionary[key] = dictionary[key][0]
+            new_dictionary[key.replace("-", "_")] = dictionary[key][0]
         else:
-            dictionary[key] = None
-    return dictionary
+            new_dictionary[key] = None
+    return new_dictionary
 
 @app.route('/')
 def homepage():
