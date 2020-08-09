@@ -7,7 +7,8 @@ import datetime
 import jwt
 
 USER_ATTRIBUTES = ['uid', 'cn', 'mail']
-GROUP_ATTRIBUTES = ['ou', 'cn', 'businessCategory', 'owner', 'member']
+GROUP_ATTRIBUTES = ['ou', 'cn', 'businessCategory']
+GROUP_ATTRIBUTES_SPECIAL = ['ou', 'cn', 'owner', 'member']
 
 class LdapApiException(Exception):
     pass
@@ -82,8 +83,26 @@ class LdapApi():
         else:
             raise LdapApiException('Cannot find user %s' % uid)
 
+    def get_user_info(self, uid):
+        detailed_user_attributes = [
+            'uid',
+            'cn',
+            'mail',
+            'mail-alternative',
+            'mailAlias',
+            'sn',
+            'displayName',
+            'givenName',
+            'mailEnabled'
+        ]
+        self.conn.search(config.DN_PEOPLE, '(&(objectClass=inetOrgPerson)(uid=%s))' % uid, attributes=detailed_user_attributes)
+        if len(self.conn.entries) > 0:
+            return self.conn.entries[0]
+        else:
+            raise LdapApiException('Cannot find user %s' % uid)
+
     def create_guest(self, name, mail):
-        uid = 'guest.'+self.generate_username(name)
+        uid = self.generate_username('guest.' + name)
         dn = self.get_guest_dn(uid)
         self.conn.add(dn, [
             'inetOrgPerson',
@@ -219,7 +238,12 @@ class LdapApi():
 
     def get_group_members(self, group):
         group_dn = self.get_group_dn(group)
-        self.conn.search(config.DN_PEOPLE, '(&(objectClass=inetOrgPerson)(memberOf=%s))' % group_dn, attributes=USER_ATTRIBUTES)
+        self.conn.search(config.DN_PEOPLE_ACTIVE, '(&(objectClass=inetOrgPerson)(memberOf=%s))' % group_dn, attributes=USER_ATTRIBUTES)
+        return self.conn.entries
+
+    def get_group_guests(self, group):
+        group_dn = self.get_group_dn(group)
+        self.conn.search(config.DN_PEOPLE_GUESTS, '(&(objectClass=inetOrgPerson)(memberOf=%s))' % group_dn, attributes=USER_ATTRIBUTES)
         return self.conn.entries
 
     def remove_group_member(self, group, uid):
@@ -243,7 +267,7 @@ class LdapApi():
             self.add_user_mail_alias(uid, group.mail)
 
     def get_group_owners(self, group):
-        self.conn.search(config.DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % group, attributes=GROUP_ATTRIBUTES)
+        self.conn.search(config.DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % group, attributes=GROUP_ATTRIBUTES_SPECIAL)
         if len(self.conn.entries):
             group_owners = []
             for dn in self.conn.entries[0].owner.values:

@@ -12,10 +12,6 @@ class middleware():
     def __call__(self, environ, start_response):
         request = Request(environ)
         authheader = request.headers.get('Authorization')
-        print(request.url)
-        print(request.url_root)
-
-        
 
         uid = self.api.get_jwt_user(authheader)
         if uid == None and not request.url.replace(request.url_root, "") == "login":
