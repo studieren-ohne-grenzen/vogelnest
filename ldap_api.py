@@ -60,7 +60,7 @@ class LdapApi():
     def get_groups(self):
         self.conn.search(self.config.DN_GROUPS, '(objectClass=groupOfNames)', attributes=GROUP_ATTRIBUTES)
         return self.conn.entries
-
+    
     def get_group(self, uid):
         self.conn.search(config.DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % uid, attributes=GROUP_ATTRIBUTES)
         if len(self.conn.entries) > 0:
@@ -71,7 +71,7 @@ class LdapApi():
     # Users
 
     def get_users(self):
-        self.conn.search(config.DN_PEOPLE, '(objectClass=inetOrgPerson)', attributes=USER_ATTRIBUTES)
+        self.conn.search(config.DN_PEOPLE_ACTIVE, '(objectClass=inetOrgPerson)', attributes=USER_ATTRIBUTES)
         return self.conn.entries
 
     def get_user(self, uid):
@@ -268,6 +268,15 @@ class LdapApi():
             return group_owners
         else:
             raise LdapApiException('Cannot find group %s' % group)
+
+    def is_group_owner_anywhere(self, uid):
+        self.conn.search(self.config.DN_GROUPS, '(objectClass=groupOfNames)', attributes=["owner"])
+        for entry in self.conn.entries:
+            for owner in entry.owner:
+                if self.dn_to_uid(owner) == uid:
+                    return True
+        return False
+
 
     def remove_group_owner(self, ou, uid):
         group_dn = self.get_group_dn(ou)

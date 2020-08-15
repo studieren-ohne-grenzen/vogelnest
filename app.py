@@ -48,11 +48,15 @@ def login():
     username = request.json.get('username')
     password = request.json.get('password')
 
-    if api.check_user_password(username,password):
-        ## Jetzt erzeugen wir das JWT, welches den USER ausweist
-        token = token_handler.create_session_jwt_token(username)
-        return token
-    else:
+    try:
+        if api.check_user_password(username,password):
+            ## Jetzt erzeugen wir das JWT, welches den USER ausweist
+            token = token_handler.create_session_jwt_token(username)
+            return token
+        else:
+            abort(401), "Invalid credentials"
+    except e:
+        print(e)
         abort(403)
 
 # Checkt, ob ein Token gültig ist
@@ -68,10 +72,22 @@ def whoami():
     return object_to_dict(info)
 
 @app.route('/users', methods=['GET'])
-def users(group_id = None):
-    if group_id == None:
-        pass
-    return 'Hello, World!'
+def users():
+    """ Lists all users. Returns their uids in a json array.
+        
+    To access this, one must be owner in some group.
+    """
+    # Check if user is admin in some group
+    uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
+    if uid == None:
+        return abort(401)
+    if not api.is_group_owner_anywhere(uid):
+        return abort(403), "To access this endpoint, you have to be owner of a group"
+
+    # Ok, they are. List all users and return them!
+    all_users = [object_to_dict(x) for x in api.get_users()]
+
+    return jsonify(all_users)
 
 @app.route('/users/set_password_with_old', methods=['POST'])
 def user_set_password_with_old():
