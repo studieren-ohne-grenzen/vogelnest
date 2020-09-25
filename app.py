@@ -350,7 +350,7 @@ def remove_owner_from_group():
     api.remove_group_owner(group_id, uid)
     return "ok"
 
-@app.route('/groups/add_guest', methods=['GET'])
+@app.route('/groups/add_guest', methods=['POST'])
 def add_guest_to_group():
     group_id = sanitize(request.json.get('group_id'))
     name = sanitize(request.json.get('name'))
