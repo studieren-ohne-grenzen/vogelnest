@@ -378,19 +378,23 @@ def remove_user_from_group(group_id):
         return abort(401)
     if not api.is_active(my_uid):
         return abort(401)
-    # Users can remove themselves from a group
-    if uid == my_uid and any(x.uid == uid for x in api.get_group_members(group_id)):
-        if group_id == "allgemein":
-            return abort(401)
-        api.remove_group_member(group_id, uid)
-        return "ok"
-    # Group owners can remove anyone from a group
+    # 1st: Is the user an admin or just a user
     if any(x.uid == my_uid for x in api.get_group_owners(group_id)):
-        api.remove_group_member(group_id, uid)
-        if uid != my_uid and (group_id == "allgemein" or \
-            (api.get_groups_as_member(uid) == [] and api.get_groups_as_owner(uid) == [] and api.get_groups_as_active_pending_member(uid) == [])):
+        # Group owners can remove anyone from a group but themself
+        if uid == my_uid:
+            return abort(401) # admin tried to remove oneself
+        api.remove_group_member(group_id, uid) # remove
+        # If user removed from allgemein or from their last group, remove the user
+        if group_id == "allgemein" or \
+            (api.get_groups_as_member(uid) == [] and api.get_groups_as_owner(uid) == [] and api.get_groups_as_active_pending_member(uid) == []):
             api.delete_user(uid)
         return "ok"
+    else:
+        # Users can remove themselves from any group but allgemein
+        if uid == my_uid and any(x.uid == uid for x in api.get_group_members(group_id)) and not group_id == "allgemein":
+            api.remove_group_member(group_id, uid)
+            return "ok"
+        
     return abort(401)
 
 @app.route('/groups/<group_id>/add_owner', methods=['POST'])
