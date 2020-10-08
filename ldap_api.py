@@ -117,7 +117,7 @@ class LdapApi():
             'cn': 'Guest %s' % name,
             'givenName': 'Guest %s' % name,
             'sn': 'Guest %s' % name,
-            'mail': 'mail'
+            'mail': mail
         })
 
         if self.conn.result['result'] != 0:
