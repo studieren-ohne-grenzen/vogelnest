@@ -101,6 +101,8 @@ def users():
     uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if uid == None:
         return abort(401)
+    if not api.is_active(my_uid):
+        return abort(401)
     if not api.is_group_owner_anywhere(uid):
         return abort(403), "To access this endpoint, you have to be owner of a group"
 
@@ -198,14 +200,6 @@ def confirm_email():
         print(e)
         return abort(401)
 
-# @app.route('/users/activate', methods=['POST'])
-# def user_activate():
-#     """ I literally do not know what this means, but this "activates" a user.
-#     """
-#     uid = sanitize(request.json.get('uid'))
-#     api.activate_user(uid)
-#     return "ok", 200
-
 @app.route('/groups', methods=['GET'])
 def groups():
     """ Gets all groups. Returns them as json:
@@ -218,6 +212,11 @@ def groups():
         ...
     ]
     """
+    username = token_handler.get_jwt_user(request.headers.get('Authorization'))
+    if username == None:
+        return abort(401)
+    if not api.is_active(username):
+        return abort(401)
     groups = [object_to_dict(x) for x in api.get_groups()]
     return jsonify(groups)
 
@@ -236,6 +235,8 @@ def mygroups():
     """
     username = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if username == None:
+        return abort(401)
+    if not api.is_active(username):
         return abort(401)
     pending_groups = [object_to_dict(x) for x in api.get_groups_as_active_pending_member(username)]
     member_groups = [object_to_dict(x) for x in api.get_groups_as_member(username)]
@@ -266,6 +267,8 @@ def group_members(group_id):
     uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if uid == None:
         return abort(401)
+    if not api.is_active(uid):
+        return abort(401)
     if not any(x.uid == uid for x in api.get_group_owners(group_id)):
         return abort(401)
     ldap_members = api.get_group_members(group_id)
@@ -282,6 +285,8 @@ def group_guests(group_id):
     group_id = sanitize(group_id)
     uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if uid == None:
+        return abort(401)
+    if not api.is_active(uid):
         return abort(401)
     if not any(x.uid == uid for x in api.get_group_owners(group_id)):
         return abort(401)
@@ -300,6 +305,8 @@ def group_active_pending_members(group_id):
     my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if my_uid == None:
         return abort(401)
+    if not api.is_active(my_uid):
+        return abort(401)
     if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
         return abort(401)
     ldap_members = api.get_group_active_pending_members(group_id)
@@ -317,6 +324,8 @@ def group_inactive_pending_members(group_id):
     my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if my_uid == None:
         return abort(401)
+    if not api.is_active(my_uid):
+        return abort(401)
     if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
         return abort(401)
     ldap_members = api.get_group_inactive_pending_members(group_id)
@@ -330,6 +339,9 @@ def group_inactive_pending_members(group_id):
 
 @app.route('/groups/<group_id>/owners', methods=['GET'])
 def group_owners(group_id):
+    my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
+    if not api.is_active(uid):
+        return abort(401)
     group_id = sanitize(group_id)
     ldap_owners = api.get_group_owners(group_id)
     owners = []
@@ -347,6 +359,8 @@ def add_user_to_group(group_id):
     my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if my_uid == None:
         return abort(401)
+    if not api.is_active(my_uid):
+        return abort(401)
     if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
         return abort(401)
     api.add_group_member(group_id, uid)
@@ -363,6 +377,8 @@ def remove_user_from_group(group_id):
     uid = sanitize(request.json.get('uid'))
     my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if my_uid == None:
+        return abort(401)
+    if not api.is_active(my_uid):
         return abort(401)
     # Users can remove themselves from a group
     if uid == my_uid and any(x.uid == uid for x in api.get_group_members(group_id)):
@@ -386,6 +402,8 @@ def add_owner_to_group(group_id):
     my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if my_uid == None:
         return abort(401)
+    if not api.is_active(my_uid):
+        return abort(401)
     if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
         return abort(401)
     api.add_group_owner(group_id, uid)
@@ -397,6 +415,8 @@ def remove_owner_from_group(group_id):
     uid = sanitize(request.json.get('uid'))
     my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if my_uid == None:
+        return abort(401)
+    if not api.is_active(my_uid):
         return abort(401)
     if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
         return abort(401)
@@ -411,6 +431,8 @@ def add_guest_to_group(group_id):
     my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if my_uid == None:
         return abort(401)
+    if not api.is_active(my_uid):
+        return abort(401)
     if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
         return abort(401)
     uid = api.create_guest(name, mail)
@@ -422,6 +444,8 @@ def request_access_to_group(group_id):
     group_id = sanitize(group_id)
     my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if my_uid == None:
+        return abort(401)
+    if not api.is_active(my_uid):
         return abort(401)
     api.add_group_active_pending_member(group_id, my_uid)
     group = api.get_group(group_id)
@@ -443,6 +467,8 @@ def accept_pending_member(group_id):
     my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if my_uid == None:
         return abort(401)
+    if not api.is_active(my_uid):
+        return abort(401)
     if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
         return abort(401)
     if any(x.uid == uid for x in api.get_group_inactive_pending_members(group_id)):
@@ -461,6 +487,8 @@ def remove_pending_member_from_group(group_id):
     uid = sanitize(request.json.get('uid'))
     my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if my_uid == None:
+        return abort(401)
+    if not api.is_active(my_uid):
         return abort(401)
     # Users can remove their own requests from a group
     if uid == my_uid and any(x.uid == uid for x in api.get_group_active_pending_members(group_id)):

@@ -92,6 +92,12 @@ class LdapApi():
         else:
             raise LdapApiException('Cannot find user %s' % uid)
 
+    def is_active(self, uid):
+        self.conn.search(config.DN_PEOPLE_ACTIVE, '(&(objectClass=inetOrgPerson)(uid=%s))' % uid, attributes=USER_ATTRIBUTES)
+        if len(self.conn.entries) > 0:
+            return True
+        return False
+
     def get_user_by_alternative_mail(self, alternative_mail):
         self.conn.search(config.DN_PEOPLE, '(&(objectClass=inetOrgPerson)(mail-alternative=%s))' % alternative_mail, attributes=USER_ATTRIBUTES)
         if len(self.conn.entries) > 0:
