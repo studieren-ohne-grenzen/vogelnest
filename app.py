@@ -38,23 +38,50 @@ def object_to_dict(obj):
 def homepage():
     return abort(401) # Security by obscurity
 
-# LOGIN
-# HTTP 401: Bitte einloggen
-# HTTP 403: Falsches Passwort / falscher Nutzername
-# Der Client sendet per POST ein JSON Dokument
-# Mit Username und Passowrt
 @app.route('/login', methods=['POST'])
 def login():
     username = request.json.get('username')
     password = request.json.get('password')
     try:
-        if api.check_user_password(username,password):
+        successful, _ = api.check_user_password(username, password)
+        if successful:
             token = token_handler.create_session_jwt_token(username)
             return token
         else:
             abort(401), "Invalid credentials"
     except Exception as e:
         abort(403)
+
+@app.route('/inactive_info', methods=['GET'])
+def inactive_info():
+    uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
+    if uid == None:
+        return abort(401)
+    inactive_user = None
+    try:
+        inactive_info = api.get_inactive_user(uid)
+    except LdapApiException as e:
+        return jsonify({
+            "inactive": False
+        })
+    # Get the owners of the group you are pending in
+    groups = api.get_groups_as_inactive_pending_member(uid)
+    if len(groups) != 1:
+        return jsonify({
+            "inactive": True
+        })
+    group = groups[0]
+    emails = []
+    for owner in group.owner:
+        user = api.get_user(dn_to_uid(str(owner)))
+        emails.append(str(user.mail))
+    group_name = str(group.cn)
+    return jsonify({
+        "inactive": True,
+        "pending_group_name": group_name,
+        "owner_emails": emails,
+    })
+
 
 @app.route('/whoami', methods=['GET'])
 def whoami():
@@ -94,7 +121,8 @@ def user_set_password_with_old():
 
     old_password = request.json.get('old_password')
     new_password = request.json.get('new_password')
-    if api.check_user_password(uid, old_password):
+    successful, _ = api.check_user_password(uid, old_password)
+    if successful:
         api.set_user_password(uid, new_password)
         return "ok", 200
     else:

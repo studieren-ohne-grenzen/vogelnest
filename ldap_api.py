@@ -178,8 +178,14 @@ class LdapApi():
 
     def check_user_password(self, uid, password):
         successful = False
+        inactive = None
         try:
-            user_dn = self.find_user_dn(uid)
+            try:
+                user_dn = self.find_user_dn(uid)
+                inactive = False
+            except LdapApiException as e:
+                user_dn = self.find_inactive_user_dn(uid)
+                inactive = True
             new_server = Server(config.LDAP_HOST, port=config.LDAP_PORT, allowed_referral_hosts=[('*', True)])
             new_conn = Connection(new_server, user_dn, password, auto_bind=True)
             new_conn.bind()
@@ -189,9 +195,8 @@ class LdapApi():
             print(e)
             successful = False
             pass
-        
-        return successful
-        
+        return successful, inactive
+
     # Groups: pending
     def get_groups_as_active_pending_member(self, uid):
         user_dn = self.find_user_dn(uid)
