@@ -372,7 +372,7 @@ def request_access_to_group():
         return abort(401)
     if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
         return abort(401)
-    api.add_group_member(group_id, my_uid)
+    api.add_group_pending_member(group_id, my_uid)
     return "ok"
 
 @app.route('/groups/<group_id>/accept_pending_member', methods=['POST'])
