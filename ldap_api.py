@@ -7,6 +7,7 @@ import config
 USER_ATTRIBUTES = ['uid', 'cn', 'mail']
 GROUP_ATTRIBUTES = ['ou', 'cn', 'businessCategory']
 GROUP_ATTRIBUTES_SPECIAL = ['ou', 'cn', 'owner', 'member']
+GROUP_ATTRIBUTES_PENDING = ['ou', 'cn', 'owner', 'member', 'pending']
 
 class LdapApiException(Exception):
     pass
@@ -57,6 +58,9 @@ class LdapApi():
     def find_user_dn(self, uid):
         return self.get_user(uid).entry_dn
 
+    def find_inactive_user_dn(self, uid):
+        return self.get_inactive_user(uid).entry_dn
+
     def get_groups(self):
         self.conn.search(self.config.DN_GROUPS, '(objectClass=groupOfNames)', attributes=GROUP_ATTRIBUTES)
         return self.conn.entries
@@ -75,7 +79,14 @@ class LdapApi():
         return self.conn.entries
 
     def get_user(self, uid):
-        self.conn.search(config.DN_PEOPLE, '(&(objectClass=inetOrgPerson)(uid=%s))' % uid, attributes=USER_ATTRIBUTES)
+        self.conn.search(config.DN_PEOPLE_ACTIVE, '(&(objectClass=inetOrgPerson)(uid=%s))' % uid, attributes=USER_ATTRIBUTES)
+        if len(self.conn.entries) > 0:
+            return self.conn.entries[0]
+        else:
+            raise LdapApiException('Cannot find user %s' % uid)
+
+    def get_inactive_user(self, uid):
+        self.conn.search(config.DN_PEOPLE_INACTIVE, '(&(objectClass=inetOrgPerson)(uid=%s))' % uid, attributes=USER_ATTRIBUTES)
         if len(self.conn.entries) > 0:
             return self.conn.entries[0]
         else:
@@ -126,9 +137,9 @@ class LdapApi():
 
     def activate_user(self, uid):
         old_dn = self.get_inactive_person_dn(uid)
-        pending_groups = self.get_groups_as_pending_member(uid)
+        pending_groups = self.get_groups_as_inactive_pending_member(uid)
         for group in pending_groups:
-            self.remove_group_pending_member(str(group.ou), uid)
+            self.remove_group_inactive_pending_member(str(group.ou), uid)
         self.conn.modify_dn(old_dn, 'uid=%s' % uid, new_superior=self.config.DN_PEOPLE_ACTIVE)
         for group in pending_groups:
             self.add_group_pending_member(str(group.ou), uid)
@@ -182,21 +193,26 @@ class LdapApi():
         return successful
         
     # Groups: pending
-    def get_groups_as_pending_member(self, uid):
+    def get_groups_as_active_pending_member(self, uid):
         user_dn = self.find_user_dn(uid)
-        self.conn.search(self.config.DN_GROUPS, '(&(objectClass=groupOfNames)(pending=%s))' % user_dn, attributes=GROUP_ATTRIBUTES)
+        self.conn.search(self.config.DN_GROUPS, '(&(objectClass=groupOfNames)(pending=%s))' % user_dn, attributes=GROUP_ATTRIBUTES_PENDING)
         return self.conn.entries
 
-    def add_group_pending_member(self, group, uid):
+    def get_groups_as_inactive_pending_member(self, uid):
+        user_dn = self.find_inactive_user_dn(uid)
+        self.conn.search(self.config.DN_GROUPS, '(&(objectClass=groupOfNames)(pending=%s))' % user_dn, attributes=GROUP_ATTRIBUTES_PENDING)
+        return self.conn.entries
+
+    def add_group_active_pending_member(self, group, uid):
         group_dn = self.get_group_dn(group)
         user_dn = self.find_user_dn(uid)
         self.conn.modify(group_dn, {'pending': [(MODIFY_ADD, [user_dn])]})
 
-    def get_group_pending_members(self, group):
-        self.conn.search(config.DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % group, attributes=GROUP_ATTRIBUTES)
+    def get_group_active_pending_members(self, group):
+        self.conn.search(config.DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % group, attributes=GROUP_ATTRIBUTES_PENDING)
         if len(self.conn.entries):
             group_members = []
-            if not "values" in self.conn.entries[0]:
+            if not "pending" in self.conn.entries[0]:
                 return []
             for dn in self.conn.entries[0].pending.values:
                 try:
@@ -208,9 +224,31 @@ class LdapApi():
         else:
             raise LdapApiException('Cannot find group %s' % group)
 
-    def remove_group_pending_member(self, group, uid):
+    def get_group_inactive_pending_members(self, group):
+        self.conn.search(config.DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % group, attributes=GROUP_ATTRIBUTES_PENDING)
+        if len(self.conn.entries):
+            group_members = []
+            if not "pending" in self.conn.entries[0]:
+                return []
+            for dn in self.conn.entries[0].pending.values:
+                try:
+                    group_members.append(self.get_inactive_user(self.dn_to_uid(dn)))
+                # this happens
+                except LdapApiException:
+                    print(dn, "does not exist")
+            return group_members
+        else:
+            raise LdapApiException('Cannot find group %s' % group)
+
+
+    def remove_group_active_pending_member(self, group, uid):
         group_dn = self.get_group_dn(group)
         user_dn = self.find_user_dn(uid)
+        self.conn.modify(group_dn, {'pending': [(MODIFY_DELETE, [user_dn])]})
+
+    def remove_group_inactive_pending_member(self, group, uid):
+        group_dn = self.get_group_dn(group)
+        user_dn = self.find_inactive_user_dn(uid)
         self.conn.modify(group_dn, {'pending': [(MODIFY_DELETE, [user_dn])]})
 
     # Groups: member

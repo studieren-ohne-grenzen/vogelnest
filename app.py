@@ -273,15 +273,32 @@ def group_guests(group_id):
             print(e)
     return jsonify(members)
 
-@app.route('/groups/<group_id>/pending_members', methods=['GET'])
-def group_pending_members(group_id):
+@app.route('/groups/<group_id>/active_pending_members', methods=['GET'])
+def group_active_pending_members(group_id):
     group_id = sanitize(group_id)
     my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if my_uid == None:
         return abort(401)
     if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
         return abort(401)
-    ldap_members = api.get_group_pending_members(group_id)
+    ldap_members = api.get_group_active_pending_members(group_id)
+    members = []
+    for x in ldap_members:
+        try:
+            members.append(object_to_dict(x))
+        except Exception as e:
+            print(e)
+    return jsonify(members)
+
+@app.route('/groups/<group_id>/inactive_pending_members', methods=['GET'])
+def group_inactive_pending_members(group_id):
+    group_id = sanitize(group_id)
+    my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
+    if my_uid == None:
+        return abort(401)
+    if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
+        return abort(401)
+    ldap_members = api.get_group_inactive_pending_members(group_id)
     members = []
     for x in ldap_members:
         try:
@@ -385,7 +402,17 @@ def request_access_to_group(group_id):
     my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if my_uid == None:
         return abort(401)
-    api.add_group_pending_member(group_id, my_uid)
+    api.add_group_active_pending_member(group_id, my_uid)
+    group = api.get_group(group_id)
+    user = api.get_user(my_uid)
+    for owner in api.get_group_owners(group_id):
+        mail.send_text_message(str(owner.mail), "Neue Anfrage in " + str(group.cn), \
+               "emails/new_pending_member_mail.html", {
+                   "name": str(owner.cn),
+                   "group_name": str(group.cn),
+                   "dashboard_url": config.DASHBOARD_URL,
+                   "new_member_name": str(user.cn)
+               })
     return "ok"
 
 @app.route('/groups/<group_id>/accept_pending_member', methods=['POST'])
@@ -397,7 +424,9 @@ def accept_pending_member(group_id):
         return abort(401)
     if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
         return abort(401)
-    api.remove_group_pending_member(group_id, uid)
+    if any(x.uid == uid for x in api.get_group_inactive_pending_members(group_id)):
+        api.activate_user(uid)
+    api.remove_group_active_pending_member(group_id, uid)
     api.add_group_member(group_id, uid)
     return "ok"
 
@@ -413,12 +442,12 @@ def remove_pending_member_from_group(group_id):
     if my_uid == None:
         return abort(401)
     # Users can remove their own requests from a group
-    if uid == my_uid and any(x.uid == uid for x in api.get_group_pending_members(group_id)):
-        api.remove_group_pending_member(group_id, uid)
+    if uid == my_uid and any(x.uid == uid for x in api.get_group_active_pending_members(group_id)):
+        api.remove_group_active_pending_member(group_id, uid)
         return "ok"
     # Group owners can remove any pending member
     if any(x.uid == my_uid for x in api.get_group_owners(group_id)):
-        api.remove_group_pending_member(group_id, uid)
+        api.remove_group_active_pending_member(group_id, uid)
         return "ok"
     return abort(401)
 

@@ -25,6 +25,5 @@ def send_text_message(to_email, subject, file_name, replacements):
     file = open(file_name)
     text = file.read()
     file.close()
-    for replacement_key in replacements:
-        text = text.replace("{" + replacement_key + "}", replacements[replacement_key])
+    text = text.format(**replacements)
     send_message(to_email, subject, text)
