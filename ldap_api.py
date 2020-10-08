@@ -277,7 +277,6 @@ class LdapApi():
                     return True
         return False
 
-
     def remove_group_owner(self, ou, uid):
         group_dn = self.get_group_dn(ou)
         user_dn = self.find_user_dn(uid)

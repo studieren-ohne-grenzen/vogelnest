@@ -397,7 +397,7 @@ def accept_pending_member(group_id):
     return "ok"
 
 @app.route('/groups/<group_id>/remove_pending_member', methods=['POST'])
-def remove_user_from_group(group_id):
+def remove_pending_member_from_group(group_id):
     """ Cancels a membership request. Call this function if you want to either remove
     your own membership request from a group or you want to remove another user's request
     from a group as an owner.
@@ -416,7 +416,6 @@ def remove_user_from_group(group_id):
         api.remove_group_pending_member(group_id, uid)
         return "ok"
     return abort(401)
-
 
 @app.route('/confirm', methods=['GET'])
 def confirm_mail():
