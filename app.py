@@ -408,11 +408,17 @@ def remove_owner_from_group(group_id):
     group_id = sanitize(group_id)
     uid = sanitize(request.json.get('uid'))
     my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
+    # Auth is missing
     if my_uid == None:
         return abort(401)
+    # User is inactive
     if not api.is_active(my_uid):
         return abort(401)
+    # User is not an owner
     if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
+        return abort(401)
+    # User is the ownly owner despite dashboardadmin
+    if not any((x.uid != "dashboardadmin" and x.uid != my_uid) for x in api.get_group_owners(group_id)):
         return abort(401)
     api.remove_group_owner(group_id, uid)
     return "ok"
