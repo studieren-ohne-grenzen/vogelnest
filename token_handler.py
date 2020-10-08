@@ -41,17 +41,3 @@ def get_token_user_with_string(token_str):
     except jwt.InvalidTokenError:
         return None
     return jwt_user
-
-
-def read_email_token(token_str):
-    try:
-        token = jwt.decode(token_str, config.JWT_SECRET, algorithms=['HS256'])
-        if token["type"] == "password_reset":
-            pass
-        elif token["type"] == "email_confirmation":
-            app.api.set_user_mail(app.sanitize(token["username"]), app.sanitize(token["email"]))
-        else:
-            return None
-        return token["type"]
-    except jwt.InvalidTokenError:
-        return None

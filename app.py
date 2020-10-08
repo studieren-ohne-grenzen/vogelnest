@@ -6,6 +6,8 @@ from ldap3.utils import conv
 from middleware import middleware
 import token_handler
 from os.path import join
+from urllib.parse import unquote
+import jwt
 
 import json
 import config
@@ -143,19 +145,6 @@ def user_set_password_with_key():
     api.set_user_password(uid, new_password)
     return "ok", 200
 
-# @app.route('/users/set_alternative_mail', methods=['POST'])
-# def user_set_alternative_mail():
-#     """ Sets the alternative_mail by sending an email with a link.
-#     Takes a json body containing the key "alternative_mail".
-#     """
-#     uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
-#     if uid == None:
-#         return abort(401)
-#     new_mail = request.json.get('alternative_mail')
-#     confirm_email()
-#     api.set_user_alternative_mail(uid, new_mail)
-#     return "ok", 200
-
 @app.route('/users/reset_password', methods=['POST'])
 def user_reset_password():
     """ Starts the reset password process by sending a reset mail to the alternative_mail.
@@ -176,8 +165,8 @@ def user_reset_password():
         print(e)
         return abort(401)
 
-@app.route('/users/confirm_email', methods=['POST'])
-def confirm_email():
+@app.route('/users/set_alternative_mail', methods=['POST'])
+def set_alternative_mail():
     """ Starts the email confirmation process by sending an email.
     Takes a json body with the key "alternative_mail".
     """
@@ -512,12 +501,24 @@ def remove_pending_member_from_group(group_id):
 @app.route('/confirm', methods=['GET'])
 def confirm_mail():
     token_str = request.args.get('key')
-    token_type = token_handler.read_email_token(token_str)
+    token_type = None
+    try:
+        token = jwt.decode(token_str, config.JWT_SECRET, algorithms=['HS256'])
+        if token["type"] == "password_reset":
+            pass
+        elif token["type"] == "email_confirmation":
+            api.set_user_mail(sanitize(token["username"]), sanitize(token["email"]))
+        else:
+            return abort(400)
+        token_type = token["type"]
+    except jwt.InvalidTokenError:
+        return abort(401)
+
     redirect_url = None
     if token_type == None:
         return abort(401)
     elif token_type == "password_reset":
-        redirect_url = config.FRONTEND_URL + "/confirm/password"
+        redirect_url = config.FRONTEND_URL + "/confirm/password?key=" + token_str
     elif token_type == "email_confirmation":
         redirect_url = config.FRONTEND_URL + "/confirm/email"
-    return redirect(redirect_url, code=302)
+    return redirect(unquote(redirect_url), code=302)
