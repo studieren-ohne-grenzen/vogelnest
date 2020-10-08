@@ -378,7 +378,10 @@ def remove_user_from_group(group_id):
         return abort(401)
     if not api.is_active(my_uid):
         return abort(401)
-    # 1st: Is the user an admin or just a user
+    # 1st: Is the uid the group?
+    if not (any(x.uid == uid for x in api.get_group_guests(group_id)) or any(x.uid == uid for x in api.get_group_members(group_id))):
+        return abort(400)
+    # 2nd: Is the user an admin or just a user
     if any(x.uid == my_uid for x in api.get_group_owners(group_id)):
         # Group owners can remove anyone from a group but themself
         if uid == my_uid:
