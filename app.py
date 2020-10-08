@@ -47,22 +47,15 @@ def homepage():
 def login():
     username = request.json.get('username')
     password = request.json.get('password')
-
     try:
         if api.check_user_password(username,password):
-            ## Jetzt erzeugen wir das JWT, welches den USER ausweist
             token = token_handler.create_session_jwt_token(username)
             return token
         else:
             abort(401), "Invalid credentials"
-    except e:
-        print(e)
+    except Exception as e:
         abort(403)
 
-# Checkt, ob ein Token gültig ist
-# TODO nur für Debug
-# Man tut den Namen als username param und das JWT in das Bearer Feld
-# Man bekommt dann seinen Namen geochot
 @app.route('/whoami', methods=['GET'])
 def whoami():
     uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
@@ -216,7 +209,7 @@ def mygroups():
     username = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if username == None:
         return abort(401)
-    pending_groups = [object_to_dict(x) for x in api.get_groups_as_pending_member(username)]
+    pending_groups = [object_to_dict(x) for x in api.get_groups_as_active_pending_member(username)]
     member_groups = [object_to_dict(x) for x in api.get_groups_as_member(username)]
     owned_groups = [object_to_dict(x) for x in api.get_groups_as_owner(username)]
 
@@ -353,7 +346,7 @@ def remove_user_from_group(group_id):
     if any(x.uid == my_uid for x in api.get_group_owners(group_id)):
         api.remove_group_member(group_id, uid)
         if uid != my_uid and (group_id == "allgemein" or \
-            (api.get_groups_as_member(uid) == [] and api.get_groups_as_owner(uid) == [] and api.get_groups_as_pending_member(uid) == [])):
+            (api.get_groups_as_member(uid) == [] and api.get_groups_as_owner(uid) == [] and api.get_groups_as_active_pending_member(uid) == [])):
             api.delete_user(uid)
         return "ok"
     return abort(401)
