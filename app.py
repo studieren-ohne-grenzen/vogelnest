@@ -314,10 +314,10 @@ def add_user_to_group(group_id):
     api.add_group_member(group_id, uid)
     return "ok"
 
-@app.route('/groups/<group_id>/remove_member/<uid>', methods=['POST'])
-def remove_user_from_group(group_id, uid):
+@app.route('/groups/<group_id>/remove_member', methods=['POST'])
+def remove_user_from_group(group_id):
     group_id = sanitize(group_id)
-    uid = sanitize(request.json.get())
+    uid = sanitize(request.json.get('uid'))
     my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if my_uid == None:
         return abort(401)
