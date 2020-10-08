@@ -101,7 +101,7 @@ def users():
     uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if uid == None:
         return abort(401)
-    if not api.is_active(my_uid):
+    if not api.is_active(uid):
         return abort(401)
     if not api.is_group_owner_anywhere(uid):
         return abort(403), "To access this endpoint, you have to be owner of a group"
