@@ -370,6 +370,9 @@ def remove_user_from_group(group_id):
     # 1st: Is the uid the group?
     if not (any(x.uid == uid for x in api.get_group_guests(group_id)) or any(x.uid == uid for x in api.get_group_members(group_id))):
         return abort(400)
+    # User is not Dashboardadmin, cause dashboardadmin is holy
+    if (uid == "dashboardadmin"):
+        return abort(400)
     # 2nd: Is the user an admin or just a user
     if any(x.uid == my_uid for x in api.get_group_owners(group_id)):
         # Group owners can remove anyone from a group but themself
@@ -408,11 +411,20 @@ def remove_owner_from_group(group_id):
     group_id = sanitize(group_id)
     uid = sanitize(request.json.get('uid'))
     my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
+    # Auth is missing
     if my_uid == None:
         return abort(401)
+    # User is inactive
     if not api.is_active(my_uid):
         return abort(401)
+    # User is not an owner
     if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
+        return abort(401)
+    # User is not Dashboardadmin, cause dashboardadmin is holy
+    if (uid == "dashboardadmin"):
+        return abort(401)
+    # User is the ownly owner despite dashboardadmin
+    if not any((x.uid != "dashboardadmin" and x.uid != my_uid) for x in api.get_group_owners(group_id)):
         return abort(401)
     api.remove_group_owner(group_id, uid)
     return "ok"
