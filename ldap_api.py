@@ -128,19 +128,19 @@ class LdapApi():
         old_dn = self.get_inactive_person_dn(uid)
         pending_groups = self.get_groups_as_pending_member(uid)
         for group in pending_groups:
-            self.remove_group_pending_member(group.ou, uid)
+            self.remove_group_pending_member(str(group.ou), uid)
         self.conn.modify_dn(old_dn, 'uid=%s' % uid, new_superior=self.config.DN_PEOPLE_ACTIVE)
         for group in pending_groups:
-            self.add_group_pending_member(group.ou, uid)
+            self.add_group_pending_member(str(group.ou), uid)
 
     def delete_user(self, uid):
         dn = self.find_user_dn(uid)
         groups = self.get_groups_as_member(uid)
         for group in groups:
-            self.remove_group_member(group.ou, uid)
+            self.remove_group_member(str(group.ou), uid)
         owned_groups = self.get_groups_as_owner(uid)
         for group in owned_groups:
-            self.remove_group_owner(group.ou, uid)
+            self.remove_group_owner(str(group.ou), uid)
         self.conn.delete(dn)
 
     def add_user_mail_alias(self, uid, mail):

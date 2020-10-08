@@ -200,7 +200,7 @@ def groups():
     groups = [object_to_dict(x) for x in api.get_groups()]
     return jsonify(groups)
 
-@app.route('/mygroups', methods=['GET'])
+@app.route('/my_groups', methods=['GET'])
 def mygroups():
     """ Gets all of the groups you are a member of. Returns them as json:
     [
@@ -384,8 +384,6 @@ def request_access_to_group(group_id):
     group_id = sanitize(group_id)
     my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if my_uid == None:
-        return abort(401)
-    if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
         return abort(401)
     api.add_group_pending_member(group_id, my_uid)
     return "ok"
