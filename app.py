@@ -316,15 +316,23 @@ def add_user_to_group(group_id):
 
 @app.route('/groups/<group_id>/remove_member', methods=['POST'])
 def remove_user_from_group(group_id):
+    """ Removes a user from a group. Call this function if you want to either remove
+    yourself from a group or you want to remove another user from a group as an owner.
+    """
     group_id = sanitize(group_id)
     uid = sanitize(request.json.get('uid'))
     my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if my_uid == None:
         return abort(401)
-    if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
-        return abort(401)
-    api.remove_group_member(group_id, uid)
-    return "ok"
+    # Users can remove themselves from a group
+    if uid == my_uid and any(x.uid == uid for x in api.get_group_members(group_id)):
+        api.remove_group_member(group_id, uid)
+        return "ok"
+    # Group owners can remove anyone from a group
+    if any(x.uid == my_uid for x in api.get_group_owners(group_id)):
+        api.remove_group_member(group_id, uid)
+        return "ok"
+    return abort(401)
 
 @app.route('/groups/<group_id>/add_owner', methods=['POST'])
 def add_owner_to_group(group_id):
