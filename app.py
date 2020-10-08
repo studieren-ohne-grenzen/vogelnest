@@ -71,15 +71,12 @@ def inactive_info():
             "inactive": True
         })
     group = groups[0]
-    emails = []
-    for owner in group.owner:
-        user = api.get_user(dn_to_uid(str(owner)))
-        emails.append(str(user.mail))
     group_name = str(group.cn)
+    pending_group_owners = [object_to_dict(api.get_user(dn_to_uid(str(x)))) for x in group.owner]
     return jsonify({
         "inactive": True,
         "pending_group_name": group_name,
-        "owner_emails": emails,
+        "pending_group_owners": pending_group_owners,
     })
 
 
