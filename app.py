@@ -367,11 +367,14 @@ def remove_user_from_group(group_id):
         return abort(401)
     if not api.is_active(my_uid):
         return abort(401)
-    # 1st: Is the user an admin or just a user
+    # 1st: Is the uid the group?
+    if not (any(x.uid == uid for x in api.get_group_guests(group_id)) or any(x.uid == uid for x in api.get_group_members(group_id))):
+        return abort(400)
+    # 2nd: Is the user an admin or just a user
     if any(x.uid == my_uid for x in api.get_group_owners(group_id)):
         # Group owners can remove anyone from a group but themself
         if uid == my_uid:
-            return abort(401) # admin tried to remove oneself
+            return abort(400) # admin tried to remove oneself
         api.remove_group_member(group_id, uid) # remove
         # If user removed from allgemein or from their last group, remove the user
         if group_id == "allgemein" or \
@@ -384,7 +387,7 @@ def remove_user_from_group(group_id):
             api.remove_group_member(group_id, uid)
             return "ok"
         
-    return abort(401)
+    return abort(500)
 
 @app.route('/groups/<group_id>/add_owner', methods=['POST'])
 def add_owner_to_group(group_id):
