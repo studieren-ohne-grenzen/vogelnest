@@ -113,9 +113,9 @@ class LdapApi():
             'top',
         ], {
             'uid': uid,
-            'displayName': 'Guest %s' % name,
+            'displayName': '%s' % name,
             'cn': 'Guest %s' % name,
-            'givenName': 'Guest %s' % name,
+            'givenName': '%s' % name,
             'sn': 'Guest %s' % name,
             'mail': mail
         })

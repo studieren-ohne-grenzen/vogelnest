@@ -318,6 +318,8 @@ def add_user_to_group(group_id):
 def remove_user_from_group(group_id):
     """ Removes a user from a group. Call this function if you want to either remove
     yourself from a group or you want to remove another user from a group as an owner.
+    If an owner removes a user from allgemein, their entire account is deleted.
+    If a user is not part of any group after removal, their entire account is deleted.
     """
     group_id = sanitize(group_id)
     uid = sanitize(request.json.get('uid'))
@@ -326,11 +328,16 @@ def remove_user_from_group(group_id):
         return abort(401)
     # Users can remove themselves from a group
     if uid == my_uid and any(x.uid == uid for x in api.get_group_members(group_id)):
+        if group_id == "allgemein":
+            return abort(401)
         api.remove_group_member(group_id, uid)
         return "ok"
     # Group owners can remove anyone from a group
     if any(x.uid == my_uid for x in api.get_group_owners(group_id)):
         api.remove_group_member(group_id, uid)
+        if uid != my_uid and (group_id == "allgemein" or \
+            (api.get_groups_as_member(uid) == [] and api.get_groups_as_owner(uid) == [] and api.get_groups_as_pending_member(uid) == [])):
+            api.delete_user(uid)
         return "ok"
     return abort(401)
 
