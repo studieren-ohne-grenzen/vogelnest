@@ -156,6 +156,7 @@ class LdapApi():
         self.conn.modify_dn(old_dn, 'uid=%s' % uid, new_superior=self.config.DN_PEOPLE_ACTIVE)
         for group in pending_groups:
             self.add_group_pending_member(str(group.ou), uid)
+        self.add_group_member("allgemein", uid)
 
     def delete_user(self, uid):
         dn = self.find_user_dn(uid)

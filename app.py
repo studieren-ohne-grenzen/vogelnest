@@ -336,6 +336,8 @@ def group_inactive_pending_members(group_id):
 @app.route('/groups/<group_id>/owners', methods=['GET'])
 def group_owners(group_id):
     my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
+    if my_uid == None:
+        return abort(401)
     if not api.is_active(my_uid):
         return abort(401)
     group_id = sanitize(group_id)
