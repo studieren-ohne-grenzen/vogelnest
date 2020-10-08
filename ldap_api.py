@@ -114,9 +114,9 @@ class LdapApi():
         ], {
             'uid': uid,
             'displayName': '%s' % name,
-            'cn': 'Guest %s' % name,
-            'givenName': '%s' % name,
-            'sn': 'Guest %s' % name,
+            'cn': '%s' % name,
+            'givenName': '%s' % name.split(" ")[0],
+            'sn': '%s' % name.split(" ")[0],
             'mail': mail
         })
 
