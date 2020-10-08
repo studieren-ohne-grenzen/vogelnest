@@ -56,6 +56,7 @@ class LdapApi():
         return check
 
     def find_user_dn(self, uid):
+        print("Finding user dn of " + uid)
         return self.get_user(uid).entry_dn
 
     def find_inactive_user_dn(self, uid):
@@ -79,6 +80,13 @@ class LdapApi():
         return self.conn.entries
 
     def get_user(self, uid):
+        self.conn.search(config.DN_PEOPLE, '(&(objectClass=inetOrgPerson)(uid=%s))' % uid, attributes=USER_ATTRIBUTES)
+        if len(self.conn.entries) > 0:
+            return self.conn.entries[0]
+        else:
+            raise LdapApiException('Cannot find user %s' % uid)
+
+    def get_active_user(self, uid):
         self.conn.search(config.DN_PEOPLE_ACTIVE, '(&(objectClass=inetOrgPerson)(uid=%s))' % uid, attributes=USER_ATTRIBUTES)
         if len(self.conn.entries) > 0:
             return self.conn.entries[0]
@@ -136,7 +144,6 @@ class LdapApi():
             'sn': '%s' % name.split(" ")[0],
             'mail': mail
         })
-
         if self.conn.result['result'] != 0:
             raise RuntimeError(self.conn.result)
         return uid
@@ -227,7 +234,7 @@ class LdapApi():
                 return []
             for dn in self.conn.entries[0].pending.values:
                 try:
-                    group_members.append(self.get_user(self.dn_to_uid(dn)))
+                    group_members.append(self.get_active_user(self.dn_to_uid(dn)))
                 # this happens
                 except LdapApiException:
                     print(dn, "does not exist")

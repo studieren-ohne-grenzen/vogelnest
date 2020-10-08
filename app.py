@@ -146,7 +146,6 @@ def user_set_password_with_key():
 # @app.route('/users/set_alternative_mail', methods=['POST'])
 # def user_set_alternative_mail():
 #     """ Sets the alternative_mail by sending an email with a link.
-
 #     Takes a json body containing the key "alternative_mail".
 #     """
 #     uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
