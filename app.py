@@ -336,7 +336,7 @@ def group_inactive_pending_members(group_id):
 @app.route('/groups/<group_id>/owners', methods=['GET'])
 def group_owners(group_id):
     my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
-    if not api.is_active(uid):
+    if not api.is_active(my_uid):
         return abort(401)
     group_id = sanitize(group_id)
     ldap_owners = api.get_group_owners(group_id)
@@ -433,6 +433,13 @@ def add_guest_to_group(group_id):
         return abort(401)
     uid = api.create_guest(name, mail)
     api.add_group_member(group_id, uid)
+
+    group = api.get_group(group_id)
+    mail.send_text_message(str(owner.mail), "Du bist jetzt im Verteiler " + str(group.cn), \
+           "emails/guest_invite_email.html", {
+               "name": str(name),
+               "group_name": str(group.cn),
+           })
     return uid
 
 @app.route('/groups/<group_id>/request_access', methods=['POST'])
