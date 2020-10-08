@@ -257,7 +257,7 @@ def group_members(group_id):
     return jsonify(members)
 
 @app.route('/groups/<group_id>/guests', methods=['GET'])
-def group_guests():
+def group_guests(group_id):
     group_id = sanitize(group_id)
     uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if uid == None:
@@ -339,7 +339,7 @@ def add_owner_to_group(group_id):
     return "ok"
 
 @app.route('/groups/<group_id>/remove_owner', methods=['POST'])
-def remove_owner_from_group():
+def remove_owner_from_group(group_id):
     group_id = sanitize(group_id)
     uid = sanitize(request.json.get('uid'))
     my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
@@ -351,7 +351,7 @@ def remove_owner_from_group():
     return "ok"
 
 @app.route('/groups/<group_id>/add_guest', methods=['POST'])
-def add_guest_to_group():
+def add_guest_to_group(group_id):
     group_id = sanitize(group_id)
     name = sanitize(request.json.get('name'))
     mail = sanitize(request.json.get('mail'))
@@ -365,7 +365,7 @@ def add_guest_to_group():
     return uid
 
 @app.route('/groups/<group_id>/request_access', methods=['POST'])
-def request_access_to_group():
+def request_access_to_group(group_id):
     group_id = sanitize(group_id)
     my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if my_uid == None:
@@ -376,7 +376,7 @@ def request_access_to_group():
     return "ok"
 
 @app.route('/groups/<group_id>/accept_pending_member', methods=['POST'])
-def accept_pending_member():
+def accept_pending_member(group_id):
     group_id = sanitize(group_id)
     uid = sanitize(request.json.get('uid'))
     my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
