@@ -1,7 +1,6 @@
 import config
 import datetime
 import jwt
-import app
 
 # Erzeugt ein JWT Token für einen Nutzer
 def create_session_jwt_token(username):
