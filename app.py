@@ -163,8 +163,8 @@ def user_reset_password():
         })
         return "ok"
     except LdapApiException as e:
-        print(e)
-        return abort(401)
+        # You can't let people guess mails!
+        return "ok"
 
 @app.route('/users/set_alternative_mail', methods=['POST'])
 def set_alternative_mail():
