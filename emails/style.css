@@ -1,0 +1,44 @@
+body {
+  background-color: #00679e;
+  background-image: linear-gradient(20deg, #57b4dc 0%, #00679e 100%);
+  background-attachment: fixed;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  font-size: 1rem;
+}
+.container {
+  width: 100%;
+  height: 100%;
+}
+.white-box {
+  background-color: white;
+  max-width: 28rem;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 0px;
+  margin-bottom: 0.25rem;
+  border-radius: 0.25rem;
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+  padding-right: 2rem;
+  padding-left: 2rem;
+  color: #007EBB;
+}
+p a {
+  margin-bottom: 0.5rem;
+  margin-left: 0px;
+  margin-right: 0px;
+  margin-top: 0px;
+}
+.logo {
+  margin-left: auto;
+  margin-right: auto;
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+  padding-right: 0.5rem;
+  padding-left: 0.5rem;
+  width: 16rem;
+  color: white;
+}
+a {
+  color: #00679E;
+}
