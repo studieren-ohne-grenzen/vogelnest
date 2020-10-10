@@ -2,7 +2,7 @@ import smtplib, ssl
 import _thread
 import config
 from email.mime.text import MIMEText
-from email.mime.text import MIMEImage
+from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 
 context = ssl.create_default_context()
@@ -25,7 +25,7 @@ def compose_and_send(to_email, subject, text, html=None):
         message_alt.attach(text_part)
         html_part = MIMEText(html, "html")
         message_alt.attach(html_part)
-        logo_file = open('logo_sog.png', 'rb')
+        logo_file = open('emails/logo_sog.png', 'rb')
         logo = MIMEImage(logo_file.read())
         logo_file.close()
         logo.add_header('Content-ID', '<logo_sog>')
@@ -41,7 +41,7 @@ def compose_and_send(to_email, subject, text, html=None):
 
 def send_email(to_email, subject, file_name, replacements):
     try:
-        htmlfile = open('meta-template.html')
+        htmlfile = open('emails/meta-template.html')
         html = htmlfile.read()
         htmlfile.close()
 
@@ -49,27 +49,28 @@ def send_email(to_email, subject, file_name, replacements):
         content = contentfile.read()
         contentfile.close()
 
-        stylefile = open('style.css')
+        stylefile = open('emails/style.css')
         style = stylefile.read()
         stylefile.close()
         
         # Add content-template & styling to meta-template
-        html = html.format({ "content": content, "style": style, })
-        # Add content
-        html = html.format(**replacements)
-    except:
-        print ("Error: Could not parse html mail template. Trying to send plain text mail instead")
-        html=None
+        html = html.format(content=content.format(**replacements), style=style)
+    except Exception as e:
+        print(e)
+        print("Error: Could not parse html mail template. Trying to send plain text mail instead")
+        html = None
     
     try:
         textfile = open(file_name + '.txt')
         text = textfile.read()
         textfile.close()
         text = text.format(**replacements)
-    except:
+    except Exception as e:
+        print(e)
         print ("Error: Could not parse text mail template")
     else:
         try:
             _thread.start_new_thread(compose_and_send, (to_email, subject, text, html, ))
-        except:
-            print ("Error: Could not spawn sendmail thread")
+        except Exception as e:
+            print(e)
+            print("Error: Could not spawn sendmail thread")
