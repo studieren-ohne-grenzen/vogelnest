@@ -70,7 +70,8 @@ def send_email(to_email, subject, file_name, replacements):
         print ("Error: Could not parse text mail template")
     else:
         try:
-            _thread.start_new_thread(compose_and_send, (to_email, subject, text, html, ))
+            # _thread.start_new_thread(compose_and_send, (to_email, subject, text, html,))
+            compose_and_send(to_email, subject, text, html)
         except Exception as e:
             print(e)
             print("Error: Could not spawn sendmail thread")
