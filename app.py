@@ -154,7 +154,8 @@ def user_reset_password():
     try:
         user = api.get_user_by_alternative_mail(alternative_mail)
         if user == None:
-            return abort(401)
+            # You can't let people guess mails!
+            return "ok"
         password_reset_token = token_handler.create_password_reset_jwt_token(user.uid[0]).decode("utf-8")
         mail.send_email(alternative_mail, "Passwort-Reset", "emails/password_reset_email", {
             "name": user.uid[0],
