@@ -2,7 +2,7 @@ import smtplib, ssl
 import _thread
 import config
 from email.mime.text import MIMEText
-from email.mime.text import MIMEImage
+from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 
 context = ssl.create_default_context()
