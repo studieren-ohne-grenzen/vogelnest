@@ -159,7 +159,7 @@ def user_reset_password():
         password_reset_token = token_handler.create_password_reset_jwt_token(user.uid[0]).decode("utf-8")
         mail.send_email(alternative_mail, "Passwort-Reset", "emails/password_reset_email", {
             "name": user.uid[0],
-            "link": join(config.DASHBOARD_URL, "confirm/password?key=" + password_reset_token),
+            "link": join(config.FRONTEND_URL, "confirm/password?key=" + password_reset_token),
         })
         return "ok"
     except LdapApiException as e:
@@ -469,7 +469,7 @@ def request_access_to_group(group_id):
                "emails/new_pending_member_mail", {
                    "name": str(owner.cn),
                    "group_name": str(group.cn),
-                   "dashboard_url": config.DASHBOARD_URL,
+                   "dashboard_url": config.FRONTEND_URL,
                    "new_member_name": str(user.cn)
                })
     return "ok"
