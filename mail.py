@@ -41,13 +41,21 @@ def compose_and_send(to_email, subject, text, html=None):
 
 def send_email(to_email, subject, file_name, replacements):
     try:
-        htmlfile = open(file_name + '.html')
+        htmlfile = open('meta-template.html')
         html = htmlfile.read()
         htmlfile.close()
+
+        contentfile = open(file_name + '.html')
+        content = contentfile.read()
+        contentfile.close()
+
         stylefile = open('style.css')
         style = stylefile.read()
         stylefile.close()
-        # TODO: add styling to replacements
+        
+        # Add content-template & styling to meta-template
+        html = html.format({ "content": content, "style": style, })
+        # Add content
         html = html.format(**replacements)
     except:
         print ("Error: Could not parse html mail template. Trying to send plain text mail instead")
