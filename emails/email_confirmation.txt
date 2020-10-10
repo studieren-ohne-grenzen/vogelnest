@@ -1,0 +1,7 @@
+Hallo {name},
+
+bitte klicke öffne folgenden Link, um deine Email-Adresse zu bestätigen:
+
+{link}
+
+Dein SOG Dashboard

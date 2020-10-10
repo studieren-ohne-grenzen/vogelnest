@@ -156,7 +156,7 @@ def user_reset_password():
         if user == None:
             return abort(401)
         password_reset_token = token_handler.create_password_reset_jwt_token(user.uid[0]).decode("utf-8")
-        mail.send_text_message(alternative_mail, "Passwort-Reset", "emails/password_reset_email.html", {
+        mail.send_email(alternative_mail, "Passwort-Reset", "emails/password_reset_email", {
             "name": user.uid[0],
             "link": join(config.DASHBOARD_URL, "confirm?key=" + password_reset_token),
         })
@@ -176,7 +176,7 @@ def set_alternative_mail():
         return abort(401)
     try:
         email_reset_token = token_handler.create_email_confirmation_jwt_token(uid, alternative_mail).decode("utf-8")
-        mail.send_text_message(alternative_mail, "Email-Confirmation", "emails/email_confirmation.html", {
+        mail.send_email(alternative_mail, "Email-Confirmation", "emails/email_confirmation", {
             "name": uid,
             "link": join(config.DASHBOARD_URL, "confirm?key=" + email_reset_token),
         })
@@ -445,8 +445,8 @@ def add_guest_to_group(group_id):
     api.add_group_member(group_id, uid)
 
     group = api.get_group(group_id)
-    mail.send_text_message(str(owner.mail), "Du bist jetzt im Verteiler " + str(group.cn), \
-           "emails/guest_invite_email.html", {
+    mail.send_email(str(owner.mail), "Du bist jetzt im Verteiler " + str(group.cn), \
+           "emails/guest_invite_email", {
                "name": str(name),
                "group_name": str(group.cn),
            })
@@ -464,8 +464,8 @@ def request_access_to_group(group_id):
     group = api.get_group(group_id)
     user = api.get_user(my_uid)
     for owner in api.get_group_owners(group_id):
-        mail.send_text_message(str(owner.mail), "Neue Anfrage in " + str(group.cn), \
-               "emails/new_pending_member_mail.html", {
+        mail.send_email(str(owner.mail), "Neue Anfrage in " + str(group.cn), \
+               "emails/new_pending_member_mail", {
                    "name": str(owner.cn),
                    "group_name": str(group.cn),
                    "dashboard_url": config.DASHBOARD_URL,

@@ -1,0 +1,11 @@
+Wir von der IT bauen gerade ein neues Dashboard, wenn du diese Mail bekommst, ist das
+sicher ein Versehen. Ignoriere sie einfach! Danke :D
+
+Hallo {name},
+
+in deiner Gruppe {group_name} möchte {new_member_name} Mitglied werden.
+Im Dashboard kannst du diese Person akzeptieren oder ablehnen:
+
+{dashboard_url}
+
+Dein SOG Dashboard

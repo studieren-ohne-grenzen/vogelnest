@@ -7,15 +7,22 @@ from email.mime.multipart import MIMEMultipart
 context = ssl.create_default_context()
 port = 587
 
-def send_message(to_email, subject, text):
-    message = MIMEMultipart("alternative")
+def compose_and_send(to_email, subject, text, html=None):
+    if (html is not None):
+        message = MIMEMultipart("alternative")
+    else:
+        message = MIMEText(text)
 
-    html_text = MIMEText(text, "html")
     message["Subject"] = subject
     message["From"] = config.MAIL_ADDRESS
     message["To"] = to_email
+    
+    if (html is not None):
+        text_part = MIMEText(text, "plain")
+        message.attach(text_part)
+        html_part = MIMEText(html, "html")
+        message.attach(html_part)
 
-    message.attach(html_text)
     try:
         with smtplib.SMTP(config.MAIL_SERVER, port) as server:
             server.starttls(context=context)
@@ -24,12 +31,25 @@ def send_message(to_email, subject, text):
     except:
         print ("Error: Could not send email")
 
-def send_text_message(to_email, subject, file_name, replacements):
-    file = open(file_name)
-    text = file.read()
-    file.close()
-    text = text.format(**replacements)
+def send_email(to_email, subject, file_name, replacements):
     try:
-        _thread.start_new_thread(send_message, (to_email, subject, text, ))
+        htmlfile = open(file_name + '.html')
+        html = htmlfile.read()
+        htmlfile.close()
+        html = html.format(**replacements)
     except:
-        print ("Error: Could not spawn sendmail thread")
+        print ("Error: Could not parse html mail template. Trying to send plain text mail instead")
+        html=None
+    
+    try:
+        textfile = open(file_name + '.txt')
+        text = textfile.read()
+        textfile.close()
+        text = text.format(**replacements)
+    except:
+        print ("Error: Could not parse text mail template")
+    else:
+        try:
+            _thread.start_new_thread(compose_and_send, (to_email, subject, text, html, ))
+        except:
+            print ("Error: Could not spawn sendmail thread")

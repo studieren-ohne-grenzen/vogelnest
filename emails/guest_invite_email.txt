@@ -1,6 +1,6 @@
 Hallo {name},
-<br/>
+
 du bist jetzt auf dem Mail-Verteiler der Gruppe {group_id} eingetragen.
 Um das Abo zu beenden, wende dich bitte an die Koordinator:innen der Gruppe.
-<br/>
+
 Dein SOG Dashboard
