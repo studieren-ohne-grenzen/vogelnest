@@ -4,6 +4,7 @@ import config
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
+from email.utils import make_msgid, formatdate
 
 context = ssl.create_default_context()
 port = 587
@@ -19,6 +20,8 @@ def compose_and_send(to_email, subject, text, html=None):
     message["Subject"] = subject
     message["From"] = config.MAIL_ADDRESS
     message["To"] = to_email
+    message['Message-ID'] = make_msgid(domain=config.MAIL_DOMAIN)
+    message['Date'] = formatdate(localtime=True)
     
     if (html is not None):
         text_part = MIMEText(text, "plain")
