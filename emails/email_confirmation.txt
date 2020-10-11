@@ -4,4 +4,4 @@ bitte klicke auf folgenden Link, um deine Email-Adresse zu bestätigen:
 
 {link}
 
-Dein SOG Dashboard
+Dein SOG Vogelnest
