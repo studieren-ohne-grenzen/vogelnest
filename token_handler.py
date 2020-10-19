@@ -6,7 +6,7 @@ import jwt
 def create_session_jwt_token(username):
     return jwt.encode({
         'username': username,
-        'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=16)
+        'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
     }, config.JWT_SECRET, algorithm='HS256')
 
 def create_email_confirmation_jwt_token(username, email):
