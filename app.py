@@ -54,6 +54,33 @@ def login():
     except Exception as e:
         abort(403)
 
+@app.route('/create_user', methods=['POST'])
+def create_user():
+    # Handle Auth
+    if request.authorization["username"] != "civicrm" or request.authorization["password"] != config.CIVICRM_SECRET:
+        abort(403), "Invalid credentials"
+    firstName = sanitize(request.json.get('firstName'))
+    lastName = sanitize(request.json.get('lastName'))
+    email = sanitize(request.json.get('email'))
+    lokalgruppe = sanitize(request.json.get('lokalgruppe'))
+    try:
+        username = api.create_member(firstName, lastName,email)
+
+        # Mail fuer Passwort muss raus
+        password_reset_token = token_handler.create_password_reset_jwt_token(username).decode("utf-8")
+        mail.send_email(email, "Passwort-Reset", "emails/password_reset_email", {
+            "name": username,
+            "link": join(config.FRONTEND_URL, "confirm/password?key=" + password_reset_token),
+        })
+
+        # Anfrage auf SOG Mitgliedschaft und auf Gruppenmitgliedschaft in LG     
+
+
+        return username
+    except Exception as e:
+        print(e)
+        abort(500)
+    
 @app.route('/inactive_info', methods=['GET'])
 def inactive_info():
     uid = token_handler.get_jwt_user(request.headers.get('Authorization'))

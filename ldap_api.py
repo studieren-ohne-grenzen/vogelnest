@@ -148,6 +148,38 @@ class LdapApi():
             raise RuntimeError(self.conn.result)
         return uid
 
+    # Creates new (inactive) member
+    def create_member(self, firstName, lastName, mail):
+        username = self.generate_username("%s.%s" % (firstName, lastName))  
+        dn = self.get_inactive_person_dn(username)
+        sog_mail = username + "@studieren-ohne-grenzen.org"
+        self.conn.add(dn, [
+            'person',
+            'sogperson',
+            'organizationalPerson',
+            'inetOrgPerson',
+            'top',
+            'PostfixBookMailAccount',
+            'PostfixBookMailForward'
+        ], {
+            'uid': username,
+            'cn': '%s %s' % (firstName, lastName),
+            'displayName': firstName,
+            'givenName': firstName,
+            'sn': lastName,
+            'mail': sog_mail,
+            'mailAlias': sog_mail,
+            'mail-alternative': mail,
+            'mailHomeDirectory': '/srv/vmail/%s' % sog_mail,
+            'mailStorageDirectory': 'maildir:/srv/vmail/%s/Maildir' % sog_mail,
+            'mailEnabled': 'TRUE',
+            'mailGidNumber': 5000,
+            'mailUidNumber': 5000
+        })
+        if self.conn.result['result'] != 0:
+            raise RuntimeError(self.conn.result)
+        return username
+
     def activate_user(self, uid):
         old_dn = self.get_inactive_person_dn(uid)
         pending_groups = self.get_groups_as_inactive_pending_member(uid)

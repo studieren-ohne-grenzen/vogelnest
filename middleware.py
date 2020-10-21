@@ -14,9 +14,8 @@ class middleware():
         authheader = request.headers.get('Authorization')
 
         uid = token_handler.get_jwt_user(authheader)
-        print(request.url.replace(request.url_root, ""))
         if uid == None and \
-                not request.url.replace(request.url_root, "") in ["login", "users/reset_password", "users/set_password_with_key"] and \
+                not request.url.replace(request.url_root, "") in ["login", "users/reset_password", "users/set_password_with_key", "create_user"] and \
                 not request.url.replace(request.url_root, "").startswith("confirm"): 
             res = Response(u'Authorization failed', mimetype= 'text/plain', status=401)
             return res(environ, start_response)
