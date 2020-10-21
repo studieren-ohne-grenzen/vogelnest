@@ -10,6 +10,10 @@ python3 -m venv venv
 pip install -r requirements.txt
 ```
 
+## Documentation of the member lifecycle
+
+see [additional file](MemberLifecycle.md)
+
 ## License
 (c) Études sans frontières - Studieren Ohne Grenzen Deutschland e.V.  
 MIT License
