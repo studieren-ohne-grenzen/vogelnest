@@ -1,0 +1,18 @@
+Hallo {firstName},
+
+Wir freuen uns sehr, dich als neues Mitglied bei Studieren Ohne Grenzen begrüßen zu dürfen.
+
+Damit du direkt einsteigen und mitarbeiten kannst, haben wir dir automatisch einen Zugang für unsere Online-Plattformen erstellt.
+Über diese Plattformen tauschen wir wichtige Nachrichten, Informationen und Dateien aus und diskutieren auch Lokalgruppen-übergreifend.
+
+Dein Benutzername ist: {name}
+Bitte öffne folgenden Link, um deine Mailadresse zu bestätigen und ein Passwort zu vergeben:
+{link}
+
+Dein Account wird freigeschaltet, sobald dein Lokalkoordinator:in bestätigt hat, dass du tatsächlich bei Studieren Ohne Grenzen aktiv bist.
+
+Mit deinem Benutzernamen und dem von dir vergebenen Passwort kannst du dich auf allen SOG-Systeme einloggen.
+
+Eine Übersicht deiner Daten und Gruppen gibt dir das Vogelnest: vogelnest.studieren-ohne-grenzen.org
+Viele Grüße,
+Das SOG Vogelnest
