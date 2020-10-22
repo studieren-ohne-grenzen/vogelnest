@@ -5,6 +5,7 @@ from ldap_api import LdapApi, LdapApiException
 from ldap3.utils import conv
 from middleware import middleware
 import token_handler
+import group_request_handler
 from os.path import join
 from urllib.parse import unquote
 import jwt
@@ -489,17 +490,7 @@ def request_access_to_group(group_id):
         return abort(401)
     if not api.is_active(my_uid):
         return abort(401)
-    api.add_group_active_pending_member(group_id, my_uid)
-    group = api.get_group(group_id)
-    user = api.get_user(my_uid)
-    for owner in api.get_group_owners(group_id):
-        mail.send_email(str(owner.mail), "Neue Anfrage in " + str(group.cn), \
-               "emails/new_pending_member_mail", {
-                   "name": str(owner.cn),
-                   "group_name": str(group.cn),
-                   "dashboard_url": config.FRONTEND_URL,
-                   "new_member_name": str(user.cn)
-               })
+    group_request_handler.request_active_pending(api, group_id, my_uid)
     return "ok"
 
 @app.route('/groups/<group_id>/accept_pending_member', methods=['POST'])
