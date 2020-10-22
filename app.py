@@ -67,11 +67,11 @@ def create_user():
         username = api.create_member(firstName, lastName,email)
 
         # Mail fuer Passwort muss raus
-        password_reset_token = token_handler.create_password_reset_jwt_token(username).decode("utf-8")
+        password_reset_token = token_handler.create_initial_confirmation_jwt_token(username, email).decode("utf-8")
         mail.send_email(email, "Willkommen bei SOG!", "emails/new_user_onboarding", {
             "firstName" : firstName,
             "name": username,
-            "link": join(config.FRONTEND_URL, "confirm/password?key=" + password_reset_token),
+            "link": join(config.FRONTEND_URL, "confirm?key=" + password_reset_token),
         })
 
         # Anfrage auf SOG Mitgliedschaft und auf Gruppenmitgliedschaft in LG     
