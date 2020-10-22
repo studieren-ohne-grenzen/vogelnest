@@ -1,0 +1,13 @@
+Hallo,
+
+Soeben hat sich {new_member_name} für Deine Lokalgruppe {group_name} angemeldet.
+Das neue Mitglied ist schon auf dem Lokalgruppen-Verteiler eingetragen und hat einen Account erhalten.
+Achtung: Der SOG-Account des Mitglieds muss erst von dir aktiviert werden.
+
+Bitte bestätige am Besten jetzt direkt im Vogelnest, dass {new_member_name} tatsächlich in eurer LG aktiv ist:
+
+{dashboard_url}
+
+Viele Grüße,
+
+Das SOG Vogelnest

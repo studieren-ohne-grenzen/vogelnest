@@ -254,6 +254,11 @@ class LdapApi():
         self.conn.search(self.config.DN_GROUPS, '(&(objectClass=groupOfNames)(pending=%s))' % user_dn, attributes=GROUP_ATTRIBUTES_PENDING)
         return self.conn.entries
 
+    def add_group_inactive_pending_member(self, group, uid):
+        group_dn = self.get_group_dn(group)
+        user_dn = self.find_inactive_user_dn(uid)
+        self.conn.modify(group_dn, {'pending': [(MODIFY_ADD, [user_dn])]})
+
     def add_group_active_pending_member(self, group, uid):
         group_dn = self.get_group_dn(group)
         user_dn = self.find_user_dn(uid)

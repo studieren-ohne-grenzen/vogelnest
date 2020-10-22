@@ -63,11 +63,11 @@ def create_user():
     firstName = sanitize(request.json.get('firstName'))
     lastName = sanitize(request.json.get('lastName'))
     email = sanitize(request.json.get('email'))
-    lokalgruppe = sanitize(request.json.get('lokalgruppe'))
+    lokalgruppe = sanitize(request.json.get('lokalgruppe')) #like lg_aachen
     try:
         username = api.create_member(firstName, lastName,email)
 
-        # Mail fuer Passwort muss raus
+        # Ask member to set password
         password_reset_token = token_handler.create_initial_confirmation_jwt_token(username, email).decode("utf-8")
         mail.send_email(email, "Willkommen bei SOG!", "emails/new_user_onboarding", {
             "firstName" : firstName,
@@ -75,8 +75,9 @@ def create_user():
             "link": join(config.FRONTEND_URL, "confirm?key=" + password_reset_token),
         })
 
-        # Anfrage auf SOG Mitgliedschaft und auf Gruppenmitgliedschaft in LG     
-
+        # request membership in LG. Is non existent LG be dealt with correctly? 
+        group_request_handler.request_inactive_pending(api,lokalgruppe,username)
+        # Person becomes member of allgemein upon activation
 
         return username
     except Exception as e:
@@ -475,7 +476,7 @@ def add_guest_to_group(group_id):
     api.add_group_member(group_id, uid)
 
     group = api.get_group(group_id)
-    mail.send_email(str(owner.mail), "Du bist jetzt im Verteiler " + str(group.cn), \
+    mail.send_email(str(mail), "Du bist jetzt im Verteiler " + str(group.cn), \
            "emails/guest_invite_email", {
                "name": str(name),
                "group_name": str(group.cn),
