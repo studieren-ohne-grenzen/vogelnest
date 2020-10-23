@@ -153,6 +153,7 @@ class LdapApi():
         username = self.generate_username("%s.%s" % (firstName, lastName))  
         dn = self.get_inactive_person_dn(username)
         sog_mail = username + "@studieren-ohne-grenzen.org"
+        sog_alias = username + "@s-o-g.org"
         self.conn.add(dn, [
             'person',
             'sogperson',
@@ -168,7 +169,7 @@ class LdapApi():
             'givenName': firstName,
             'sn': lastName,
             'mail': sog_mail,
-            'mailAlias': sog_mail,
+            'mailAlias': sog_alias,
             'mail-alternative': mail,
             'mailHomeDirectory': '/srv/vmail/%s' % sog_mail,
             'mailStorageDirectory': 'maildir:/srv/vmail/%s/Maildir' % sog_mail,
