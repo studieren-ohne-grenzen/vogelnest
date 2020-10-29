@@ -64,6 +64,13 @@ def create_user():
     lastName = sanitize(request.json.get('lastName'))
     email = sanitize(request.json.get('email'))
     lokalgruppe = sanitize(request.json.get('lokalgruppe')) #like lg_aachen
+
+    # Abort 500 if lokalgruppe does not exist
+    try:
+        api.get_group(lokalgruppe)
+    except:
+        abort(500, "lokalgruppe " + lokalgruppe " does not exist")
+
     try:
         username = api.create_member(firstName, lastName,email)
 
@@ -76,7 +83,7 @@ def create_user():
         })
 
         # request membership in LG. Is non existent LG be dealt with correctly? 
-        group_request_handler.request_inactive_pending(api,lokalgruppe,username)
+        group_request_handler.request_inactive_pending(api, lokalgruppe, username)
         # Person becomes member of allgemein upon activation
 
         return username
