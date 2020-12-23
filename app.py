@@ -69,7 +69,7 @@ def create_user():
     try:
         api.get_group(lokalgruppe)
     except:
-        abort(500, "lokalgruppe " + lokalgruppe " does not exist")
+        abort(500, "lokalgruppe " + lokalgruppe + " does not exist")
 
     try:
         username = api.create_member(firstName, lastName,email)
