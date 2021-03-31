@@ -309,7 +309,7 @@ class LdapApi():
         user_dn = self.find_user_dn(uid)
         self.conn.modify(group_dn, {'owner': [(MODIFY_ADD, [user_dn])]})
         group = self.get_group(ou)
-        if ('mail' in group):
+        if 'mail' in group.entry_attributes:
             self.add_user_mail_alias(uid, group.mail)
 
     def get_group_owners(self, group):
@@ -339,5 +339,5 @@ class LdapApi():
         user_dn = self.find_user_dn(uid)
         self.conn.modify(group_dn, {'owner': [(MODIFY_DELETE, [user_dn])]})
         group = self.get_group(ou)
-        if ('mail' in group):
+        if 'mail' in group.entry_attributes:
             self.remove_user_mail_alias(uid, group.mail)
