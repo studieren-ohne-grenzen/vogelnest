@@ -5,9 +5,9 @@ from slugify import slugify
 import config
 
 USER_ATTRIBUTES = ['uid', 'cn', 'mail']
-GROUP_ATTRIBUTES = ['ou', 'cn', 'businessCategory']
-GROUP_ATTRIBUTES_SPECIAL = ['ou', 'cn', 'owner', 'member']
-GROUP_ATTRIBUTES_PENDING = ['ou', 'cn', 'owner', 'member', 'pending']
+GROUP_ATTRIBUTES = ['ou', 'cn', 'businessCategory', 'mail']
+GROUP_ATTRIBUTES_SPECIAL = ['ou', 'cn', 'owner', 'member', 'mail']
+GROUP_ATTRIBUTES_PENDING = ['ou', 'cn', 'owner', 'member', 'pending', 'mail']
 
 class LdapApiException(Exception):
     pass
