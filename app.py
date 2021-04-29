@@ -5,6 +5,7 @@ from ldap_api import LdapApi, LdapApiException
 from ldap3.utils import conv
 from middleware import middleware
 import token_handler
+import group_request_handler
 from os.path import join
 from urllib.parse import unquote
 import jwt
@@ -54,6 +55,42 @@ def login():
     except Exception as e:
         abort(403)
 
+@app.route('/create_user', methods=['POST'])
+def create_user():
+    # Handle Auth
+    if request.authorization["username"] != "civicrm" or request.authorization["password"] != config.CIVICRM_SECRET:
+        abort(403), "Invalid credentials"
+    firstName = sanitize(request.json.get('firstName'))
+    lastName = sanitize(request.json.get('lastName'))
+    email = sanitize(request.json.get('email'))
+    lokalgruppe = sanitize(request.json.get('lokalgruppe')) #like lg_aachen
+
+    # Abort 500 if lokalgruppe does not exist
+    try:
+        api.get_group(lokalgruppe)
+    except:
+        abort(500, "lokalgruppe " + lokalgruppe + " does not exist")
+
+    try:
+        username = api.create_member(firstName, lastName,email)
+
+        # Ask member to set password
+        password_reset_token = token_handler.create_initial_confirmation_jwt_token(username, email).decode("utf-8")
+        mail.send_email(email, "Willkommen bei SOG!", "emails/new_user_onboarding", {
+            "firstName" : firstName,
+            "name": username,
+            "link": join(config.FRONTEND_URL, "confirm?key=" + password_reset_token),
+        })
+
+        # request membership in LG. Is non existent LG be dealt with correctly? 
+        group_request_handler.request_inactive_pending(api, lokalgruppe, username)
+        # Person becomes member of allgemein upon activation
+
+        return username
+    except Exception as e:
+        print(e)
+        abort(500)
+    
 @app.route('/inactive_info', methods=['GET'])
 def inactive_info():
     uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
@@ -446,7 +483,7 @@ def add_guest_to_group(group_id):
     api.add_group_member(group_id, uid)
 
     group = api.get_group(group_id)
-    mail.send_email(str(owner.mail), "Du bist jetzt im Verteiler " + str(group.cn), \
+    mail.send_email(str(mail), "Du bist jetzt im Verteiler " + str(group.cn), \
            "emails/guest_invite_email", {
                "name": str(name),
                "group_name": str(group.cn),
@@ -461,17 +498,7 @@ def request_access_to_group(group_id):
         return abort(401)
     if not api.is_active(my_uid):
         return abort(401)
-    api.add_group_active_pending_member(group_id, my_uid)
-    group = api.get_group(group_id)
-    user = api.get_user(my_uid)
-    for owner in api.get_group_owners(group_id):
-        mail.send_email(str(owner.mail), "Neue Anfrage in " + str(group.cn), \
-               "emails/new_pending_member_mail", {
-                   "name": str(owner.cn),
-                   "group_name": str(group.cn),
-                   "dashboard_url": config.FRONTEND_URL,
-                   "new_member_name": str(user.cn)
-               })
+    group_request_handler.request_active_pending(api, group_id, my_uid)
     return "ok"
 
 @app.route('/groups/<group_id>/accept_pending_member', methods=['POST'])

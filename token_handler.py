@@ -24,6 +24,14 @@ def create_password_reset_jwt_token(username):
         'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
     }, config.JWT_SECRET, algorithm='HS256')
 
+def create_initial_confirmation_jwt_token(username, email):
+    return jwt.encode({
+        'type': 'initial_confirmation',
+        'username': username,
+        'email': email,
+        'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
+    }, config.JWT_SECRET, algorithm='HS256')
+
 # checks header and returns username if header is valid
 # returns None if header is invalid
 def get_jwt_user(header):

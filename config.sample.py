@@ -27,3 +27,5 @@ MAIL_ADDRESS = ''
 MAIL_SERVER = ''
 MAIL_PASSWORD = ''
 
+# Token used by civi to authenticate its requests
+CIVICRM_SECRET = ''
