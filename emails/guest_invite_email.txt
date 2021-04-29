@@ -1,6 +1,6 @@
 Hallo {name},
 
-du bist jetzt auf dem Mail-Verteiler der Gruppe {group_id} eingetragen.
+du bist jetzt auf dem Mail-Verteiler der Gruppe {group_name} eingetragen.
 Um das Abo zu beenden, wende dich bitte an die Koordinator:innen der Gruppe.
 
 Dein SOG Vogelnest
