@@ -433,7 +433,7 @@ def remove_owner_from_group(group_id):
 @app.route('/groups/<group_id>/add_guest', methods=['POST'])
 def add_guest_to_group(group_id):
     group_id = sanitize(group_id)
-    name = sanitize(request.json.get('name'))
+    guest_name = sanitize(request.json.get('name'))
     guest_mail = sanitize(request.json.get('mail'))
     my_uid = token_handler.get_jwt_user(request.headers.get('Authorization'))
     if my_uid == None:
@@ -442,13 +442,13 @@ def add_guest_to_group(group_id):
         return abort(401)
     if not any(x.uid == my_uid for x in api.get_group_owners(group_id)):
         return abort(401)
-    uid = api.create_guest(name, mail)
+    uid = api.create_guest(guest_name, guest_mail)
     api.add_group_member(group_id, uid)
 
     group = api.get_group(group_id)
     mail.send_email(str(guest_mail), "Du bist jetzt im Verteiler " + str(group.cn), \
            "emails/guest_invite_email", {
-               "name": str(name),
+               "name": str(guest_name),
                "group_name": str(group.cn),
            })
     return uid
