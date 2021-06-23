@@ -21,6 +21,14 @@ class LdapApi():
         self.conn.bind()
         print("Connected to LDAP server!")
 
+    def get_connection(self):
+        if self.conn.closed:
+            self.conn = Connection(self.server, self.config.BIND_DN, self.config.BIND_PW, auto_bind=True)
+            self.conn.start_tls()
+            self.conn.bind()
+            print("Re-connected to LDAP server!")
+        return self.conn
+
     def get_group_dn(self, ou):
         return 'ou='+ou+','+self.config.DN_GROUPS
 
@@ -49,7 +57,7 @@ class LdapApi():
         index = 2
         exists = True
         while(exists):
-            exists = self.conn.search(config.DN_PEOPLE, '(&(objectClass=inetOrgPerson)(uid=%s))' % check)
+            exists = self.get_connection().search(config.DN_PEOPLE, '(&(objectClass=inetOrgPerson)(uid=%s))' % check)
             if exists:
                 check = uid + str(index)
                 index += 1
@@ -63,53 +71,53 @@ class LdapApi():
         return self.get_inactive_user(uid).entry_dn
 
     def get_groups(self):
-        self.conn.search(self.config.DN_GROUPS, '(objectClass=groupOfNames)', attributes=GROUP_ATTRIBUTES)
-        return self.conn.entries
+        self.get_connection().search(self.config.DN_GROUPS, '(objectClass=groupOfNames)', attributes=GROUP_ATTRIBUTES)
+        return self.get_connection().entries
     
     def get_group(self, uid):
-        self.conn.search(config.DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % uid, attributes=GROUP_ATTRIBUTES)
-        if len(self.conn.entries) > 0:
-            return self.conn.entries[0]
+        self.get_connection().search(config.DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % uid, attributes=GROUP_ATTRIBUTES)
+        if len(self.get_connection().entries) > 0:
+            return self.get_connection().entries[0]
         else:
             raise LdapApiException('Cannot find user %s' % uid)
 
     # Users
 
     def get_users(self):
-        self.conn.search(config.DN_PEOPLE_ACTIVE, '(objectClass=inetOrgPerson)', attributes=USER_ATTRIBUTES)
-        return self.conn.entries
+        self.get_connection().search(config.DN_PEOPLE_ACTIVE, '(objectClass=inetOrgPerson)', attributes=USER_ATTRIBUTES)
+        return self.get_connection().entries
 
     def get_user(self, uid):
-        self.conn.search(config.DN_PEOPLE, '(&(objectClass=inetOrgPerson)(uid=%s))' % uid, attributes=USER_ATTRIBUTES)
-        if len(self.conn.entries) > 0:
-            return self.conn.entries[0]
+        self.get_connection().search(config.DN_PEOPLE, '(&(objectClass=inetOrgPerson)(uid=%s))' % uid, attributes=USER_ATTRIBUTES)
+        if len(self.get_connection().entries) > 0:
+            return self.get_connection().entries[0]
         else:
             raise LdapApiException('Cannot find user %s' % uid)
 
     def get_active_user(self, uid):
-        self.conn.search(config.DN_PEOPLE_ACTIVE, '(&(objectClass=inetOrgPerson)(uid=%s))' % uid, attributes=USER_ATTRIBUTES)
-        if len(self.conn.entries) > 0:
-            return self.conn.entries[0]
+        self.get_connection().search(config.DN_PEOPLE_ACTIVE, '(&(objectClass=inetOrgPerson)(uid=%s))' % uid, attributes=USER_ATTRIBUTES)
+        if len(self.get_connection().entries) > 0:
+            return self.get_connection().entries[0]
         else:
             raise LdapApiException('Cannot find user %s' % uid)
 
     def get_inactive_user(self, uid):
-        self.conn.search(config.DN_PEOPLE_INACTIVE, '(&(objectClass=inetOrgPerson)(uid=%s))' % uid, attributes=USER_ATTRIBUTES)
-        if len(self.conn.entries) > 0:
-            return self.conn.entries[0]
+        self.get_connection().search(config.DN_PEOPLE_INACTIVE, '(&(objectClass=inetOrgPerson)(uid=%s))' % uid, attributes=USER_ATTRIBUTES)
+        if len(self.get_connection().entries) > 0:
+            return self.get_connection().entries[0]
         else:
             raise LdapApiException('Cannot find user %s' % uid)
 
     def is_active(self, uid):
-        self.conn.search(config.DN_PEOPLE_ACTIVE, '(&(objectClass=inetOrgPerson)(uid=%s))' % uid, attributes=USER_ATTRIBUTES)
-        if len(self.conn.entries) > 0:
+        self.get_connection().search(config.DN_PEOPLE_ACTIVE, '(&(objectClass=inetOrgPerson)(uid=%s))' % uid, attributes=USER_ATTRIBUTES)
+        if len(self.get_connection().entries) > 0:
             return True
         return False
 
     def get_user_by_alternative_mail(self, alternative_mail):
-        self.conn.search(config.DN_PEOPLE, '(&(objectClass=inetOrgPerson)(mail-alternative=%s))' % alternative_mail, attributes=USER_ATTRIBUTES)
-        if len(self.conn.entries) > 0:
-            return self.conn.entries[0]
+        self.get_connection().search(config.DN_PEOPLE, '(&(objectClass=inetOrgPerson)(mail-alternative=%s))' % alternative_mail, attributes=USER_ATTRIBUTES)
+        if len(self.get_connection().entries) > 0:
+            return self.get_connection().entries[0]
         else:
             raise LdapApiException('Cannot find user with  %s' % alternative_mail)
 
@@ -124,16 +132,16 @@ class LdapApi():
             'givenName',
             'mailEnabled'
         ]
-        self.conn.search(config.DN_PEOPLE, '(&(objectClass=inetOrgPerson)(uid=%s))' % uid, attributes=detailed_user_attributes)
-        if len(self.conn.entries) > 0:
-            return self.conn.entries[0]
+        self.get_connection().search(config.DN_PEOPLE, '(&(objectClass=inetOrgPerson)(uid=%s))' % uid, attributes=detailed_user_attributes)
+        if len(self.get_connection().entries) > 0:
+            return self.get_connection().entries[0]
         else:
             raise LdapApiException('Cannot find user %s' % uid)
 
     def create_guest(self, name, mail):
         uid = self.generate_username('guest.' + name)
         dn = self.get_guest_dn(uid)
-        self.conn.add(dn, [
+        self.get_connection().add(dn, [
             'inetOrgPerson',
             'top',
         ], {
@@ -144,8 +152,8 @@ class LdapApi():
             'sn': '%s' % name.split(" ")[0],
             'mail': mail
         })
-        if self.conn.result['result'] != 0:
-            raise RuntimeError(self.conn.result)
+        if self.get_connection().result['result'] != 0:
+            raise RuntimeError(self.get_connection().result)
         return uid
 
     def activate_user(self, uid):
@@ -153,7 +161,7 @@ class LdapApi():
         pending_groups = self.get_groups_as_inactive_pending_member(uid)
         for group in pending_groups:
             self.remove_group_inactive_pending_member(str(group.ou), uid)
-        self.conn.modify_dn(old_dn, 'uid=%s' % uid, new_superior=self.config.DN_PEOPLE_ACTIVE)
+        self.get_connection().modify_dn(old_dn, 'uid=%s' % uid, new_superior=self.config.DN_PEOPLE_ACTIVE)
         for group in pending_groups:
             self.add_group_active_pending_member(str(group.ou), uid)
         self.add_group_member("allgemein", uid)
@@ -166,28 +174,28 @@ class LdapApi():
         owned_groups = self.get_groups_as_owner(uid)
         for group in owned_groups:
             self.remove_group_owner(str(group.ou), uid)
-        self.conn.delete(dn)
+        self.get_connection().delete(dn)
 
     def add_user_mail_alias(self, uid, mail):
         user_dn = self.find_user_dn(uid)
-        self.conn.modify(user_dn, {'mailAlias': [(MODIFY_ADD, [mail])]})
+        self.get_connection().modify(user_dn, {'mailAlias': [(MODIFY_ADD, [mail])]})
 
     def remove_user_mail_alias(self, uid, mail):
         user_dn = self.find_user_dn(uid)
-        self.conn.modify(user_dn, {'mailAlias': [(MODIFY_DELETE, [mail])]})
+        self.get_connection().modify(user_dn, {'mailAlias': [(MODIFY_DELETE, [mail])]})
 
     def set_user_mail(self, uid, mail):
         user_dn = self.find_user_dn(uid)
-        self.conn.modify(user_dn, {'mail-alternative': [(MODIFY_REPLACE, [mail])]})
+        self.get_connection().modify(user_dn, {'mail-alternative': [(MODIFY_REPLACE, [mail])]})
 
     def set_user_password(self, uid, password):
         user_dn = self.find_user_dn(uid)
         hashed_pw = hashed(HASHED_SALTED_SHA, password)
-        self.conn.modify(user_dn, {'userPassword': [(MODIFY_REPLACE, [hashed_pw])]})
+        self.get_connection().modify(user_dn, {'userPassword': [(MODIFY_REPLACE, [hashed_pw])]})
 
     def set_user_alternative_mail(self, uid, alternative_mail):
         user_dn = self.find_user_dn(uid)
-        self.conn.modify(user_dn, {'mail-alternative': [(MODIFY_REPLACE, [alternative_mail])]})
+        self.get_connection().modify(user_dn, {'mail-alternative': [(MODIFY_REPLACE, [alternative_mail])]})
 
     def check_user_password(self, uid, password):
         successful = False
@@ -213,26 +221,26 @@ class LdapApi():
     # Groups: pending
     def get_groups_as_active_pending_member(self, uid):
         user_dn = self.find_user_dn(uid)
-        self.conn.search(self.config.DN_GROUPS, '(&(objectClass=groupOfNames)(pending=%s))' % user_dn, attributes=GROUP_ATTRIBUTES_PENDING)
-        return self.conn.entries
+        self.get_connection().search(self.config.DN_GROUPS, '(&(objectClass=groupOfNames)(pending=%s))' % user_dn, attributes=GROUP_ATTRIBUTES_PENDING)
+        return self.get_connection().entries
 
     def get_groups_as_inactive_pending_member(self, uid):
         user_dn = self.find_inactive_user_dn(uid)
-        self.conn.search(self.config.DN_GROUPS, '(&(objectClass=groupOfNames)(pending=%s))' % user_dn, attributes=GROUP_ATTRIBUTES_PENDING)
-        return self.conn.entries
+        self.get_connection().search(self.config.DN_GROUPS, '(&(objectClass=groupOfNames)(pending=%s))' % user_dn, attributes=GROUP_ATTRIBUTES_PENDING)
+        return self.get_connection().entries
 
     def add_group_active_pending_member(self, group, uid):
         group_dn = self.get_group_dn(group)
         user_dn = self.find_user_dn(uid)
-        self.conn.modify(group_dn, {'pending': [(MODIFY_ADD, [user_dn])]})
+        self.get_connection().modify(group_dn, {'pending': [(MODIFY_ADD, [user_dn])]})
 
     def get_group_active_pending_members(self, group):
-        self.conn.search(config.DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % group, attributes=GROUP_ATTRIBUTES_PENDING)
-        if len(self.conn.entries):
+        self.get_connection().search(config.DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % group, attributes=GROUP_ATTRIBUTES_PENDING)
+        if len(self.get_connection().entries):
             group_members = []
-            if not "pending" in self.conn.entries[0]:
+            if not "pending" in self.get_connection().entries[0]:
                 return []
-            for dn in self.conn.entries[0].pending.values:
+            for dn in self.get_connection().entries[0].pending.values:
                 try:
                     group_members.append(self.get_active_user(self.dn_to_uid(dn)))
                 # this happens
@@ -243,12 +251,12 @@ class LdapApi():
             raise LdapApiException('Cannot find group %s' % group)
 
     def get_group_inactive_pending_members(self, group):
-        self.conn.search(config.DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % group, attributes=GROUP_ATTRIBUTES_PENDING)
-        if len(self.conn.entries):
+        self.get_connection().search(config.DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % group, attributes=GROUP_ATTRIBUTES_PENDING)
+        if len(self.get_connection().entries):
             group_members = []
-            if not "pending" in self.conn.entries[0]:
+            if not "pending" in self.get_connection().entries[0]:
                 return []
-            for dn in self.conn.entries[0].pending.values:
+            for dn in self.get_connection().entries[0].pending.values:
                 try:
                     group_members.append(self.get_inactive_user(self.dn_to_uid(dn)))
                 # this happens
@@ -262,60 +270,60 @@ class LdapApi():
     def remove_group_active_pending_member(self, group, uid):
         group_dn = self.get_group_dn(group)
         user_dn = self.find_user_dn(uid)
-        self.conn.modify(group_dn, {'pending': [(MODIFY_DELETE, [user_dn])]})
+        self.get_connection().modify(group_dn, {'pending': [(MODIFY_DELETE, [user_dn])]})
 
     def remove_group_inactive_pending_member(self, group, uid):
         group_dn = self.get_group_dn(group)
         user_dn = self.find_inactive_user_dn(uid)
-        self.conn.modify(group_dn, {'pending': [(MODIFY_DELETE, [user_dn])]})
+        self.get_connection().modify(group_dn, {'pending': [(MODIFY_DELETE, [user_dn])]})
 
     # Groups: member
 
     def get_groups_as_member(self, uid):
         user_dn = self.find_user_dn(uid)
-        self.conn.search(self.config.DN_GROUPS, '(&(objectClass=groupOfNames)(member=%s))' % user_dn, attributes=GROUP_ATTRIBUTES)
-        return self.conn.entries
+        self.get_connection().search(self.config.DN_GROUPS, '(&(objectClass=groupOfNames)(member=%s))' % user_dn, attributes=GROUP_ATTRIBUTES)
+        return self.get_connection().entries
 
     def add_group_member(self, group, uid):
         group_dn = self.get_group_dn(group)
         user_dn = self.find_user_dn(uid)
-        self.conn.modify(group_dn, {'member': [(MODIFY_ADD, [user_dn])]})
+        self.get_connection().modify(group_dn, {'member': [(MODIFY_ADD, [user_dn])]})
 
     def get_group_members(self, group):
         group_dn = self.get_group_dn(group)
-        self.conn.search(config.DN_PEOPLE_ACTIVE, '(&(objectClass=inetOrgPerson)(memberOf=%s))' % group_dn, attributes=USER_ATTRIBUTES)
-        return self.conn.entries
+        self.get_connection().search(config.DN_PEOPLE_ACTIVE, '(&(objectClass=inetOrgPerson)(memberOf=%s))' % group_dn, attributes=USER_ATTRIBUTES)
+        return self.get_connection().entries
 
     def get_group_guests(self, group):
         group_dn = self.get_group_dn(group)
-        self.conn.search(config.DN_PEOPLE_GUESTS, '(&(objectClass=inetOrgPerson)(memberOf=%s))' % group_dn, attributes=USER_ATTRIBUTES)
-        return self.conn.entries
+        self.get_connection().search(config.DN_PEOPLE_GUESTS, '(&(objectClass=inetOrgPerson)(memberOf=%s))' % group_dn, attributes=USER_ATTRIBUTES)
+        return self.get_connection().entries
 
     def remove_group_member(self, group, uid):
         group_dn = self.get_group_dn(group)
         user_dn = self.find_user_dn(uid)
-        self.conn.modify(group_dn, {'member': [(MODIFY_DELETE, [user_dn])]})
+        self.get_connection().modify(group_dn, {'member': [(MODIFY_DELETE, [user_dn])]})
 
     # Groups: owner
 
     def get_groups_as_owner(self, uid):
         user_dn = self.find_user_dn(uid)
-        self.conn.search(self.config.DN_GROUPS, '(&(objectClass=groupOfNames)(owner=%s))' % user_dn, attributes=GROUP_ATTRIBUTES)
-        return self.conn.entries
+        self.get_connection().search(self.config.DN_GROUPS, '(&(objectClass=groupOfNames)(owner=%s))' % user_dn, attributes=GROUP_ATTRIBUTES)
+        return self.get_connection().entries
 
     def add_group_owner(self, ou, uid):
         group_dn = self.get_group_dn(ou)
         user_dn = self.find_user_dn(uid)
-        self.conn.modify(group_dn, {'owner': [(MODIFY_ADD, [user_dn])]})
+        self.get_connection().modify(group_dn, {'owner': [(MODIFY_ADD, [user_dn])]})
         group = self.get_group(ou)
         if 'mail' in group.entry_attributes:
             self.add_user_mail_alias(uid, str(group.mail))
 
     def get_group_owners(self, group):
-        self.conn.search(config.DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % group, attributes=GROUP_ATTRIBUTES_SPECIAL)
-        if len(self.conn.entries):
+        self.get_connection().search(config.DN_GROUPS, '(&(objectClass=groupOfNames)(ou=%s))' % group, attributes=GROUP_ATTRIBUTES_SPECIAL)
+        if len(self.get_connection().entries):
             group_owners = []
-            for dn in self.conn.entries[0].owner.values:
+            for dn in self.get_connection().entries[0].owner.values:
                 try:
                     group_owners.append(self.get_user(self.dn_to_uid(dn)))
                 # this happens
@@ -326,8 +334,8 @@ class LdapApi():
             raise LdapApiException('Cannot find group %s' % group)
 
     def is_group_owner_anywhere(self, uid):
-        self.conn.search(self.config.DN_GROUPS, '(objectClass=groupOfNames)', attributes=["owner"])
-        for entry in self.conn.entries:
+        self.get_connection().search(self.config.DN_GROUPS, '(objectClass=groupOfNames)', attributes=["owner"])
+        for entry in self.get_connection().entries:
             for owner in entry.owner:
                 if self.dn_to_uid(owner) == uid:
                     return True
@@ -336,7 +344,7 @@ class LdapApi():
     def remove_group_owner(self, ou, uid):
         group_dn = self.get_group_dn(ou)
         user_dn = self.find_user_dn(uid)
-        self.conn.modify(group_dn, {'owner': [(MODIFY_DELETE, [user_dn])]})
+        self.get_connection().modify(group_dn, {'owner': [(MODIFY_DELETE, [user_dn])]})
         group = self.get_group(ou)
         if 'mail' in group.entry_attributes:
             self.remove_user_mail_alias(uid, str(group.mail))
