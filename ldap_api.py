@@ -17,14 +17,12 @@ class LdapApi():
         self.config = config
         self.server = Server(config.LDAP_HOST, port=config.LDAP_PORT, allowed_referral_hosts=[('*', True)])
         self.conn = Connection(self.server, config.BIND_DN, config.BIND_PW, auto_bind=True)
-        self.conn.start_tls()
         self.conn.bind()
         print("Connected to LDAP server!")
 
     def get_connection(self):
         if self.conn.closed:
             self.conn = Connection(self.server, self.config.BIND_DN, self.config.BIND_PW, auto_bind=True)
-            self.conn.start_tls()
             self.conn.bind()
             print("Re-connected to LDAP server!")
         return self.conn
