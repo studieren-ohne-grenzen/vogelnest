@@ -18,7 +18,7 @@ api = LdapApi(config)
 app = Flask(__name__)
 app.wsgi_app = middleware(app.wsgi_app)
 
-def dn_to_uid(dn):
+def dn_to_uid(dn: str):
     return dn.split(',')[0][4:]
 
 def sanitize(x):
@@ -156,7 +156,7 @@ def user_reset_password():
         if user == None:
             # You can't let people guess mails!
             return "ok"
-        password_reset_token = token_handler.create_password_reset_jwt_token(user.uid[0]).decode("utf-8")
+        password_reset_token = token_handler.create_password_reset_jwt_token(user.uid[0])
         mail.send_email(alternative_mail, "Passwort-Reset", "emails/password_reset_email", {
             "name": user.uid[0],
             "link": join(config.FRONTEND_URL, "confirm/password?key=" + password_reset_token),
@@ -176,7 +176,7 @@ def set_alternative_mail():
     if uid == None:
         return abort(401)
     try:
-        email_reset_token = token_handler.create_email_confirmation_jwt_token(uid, alternative_mail).decode("utf-8")
+        email_reset_token = token_handler.create_email_confirmation_jwt_token(uid, alternative_mail)
         mail.send_email(alternative_mail, "Email-Confirmation", "emails/email_confirmation", {
             "name": uid,
             "link": join(config.DASHBOARD_URL, "confirm?key=" + email_reset_token),
