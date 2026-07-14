@@ -7,7 +7,7 @@ name = "pypi"
 ldap3 = "==2.6"
 python-slugify = {version = "==3.0.3", extras = ["unidecode"]}
 Flask = "==1.1.1"
-PyJWT = "==1.7.1"
+PyJWT = "==2.4.0"
 Werkzeug = "==1.0.1"
 
 [dev-packages]
